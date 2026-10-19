@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, DailySession, TradeSummary } from "../lib/api";
 import { useReference } from "../lib/useReference";
 import { formatMoney, pnlColor } from "../lib/format";
@@ -23,9 +23,10 @@ function today(): string {
 
 export default function Journal() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const { accounts } = useReference();
-  const [date, setDate] = useState(today());
-  const [accountId, setAccountId] = useState<number | null>(null);
+  const [date, setDate] = useState(params.get("date") || today());
+  const [accountId, setAccountId] = useState<number | null>(params.get("account") ? Number(params.get("account")) : null);
   const [form, setForm] = useState<Partial<DailySession>>(EMPTY(date, null));
   const [trades, setTrades] = useState<TradeSummary[]>([]);
   const [msg, setMsg] = useState<string | null>(null);

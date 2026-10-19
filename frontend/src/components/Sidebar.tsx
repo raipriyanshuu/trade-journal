@@ -8,11 +8,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: "■", phase: 5 },
+  { to: "/", label: "Dashboard", icon: "■" },
   { to: "/trades", label: "Trade Log", icon: "≡" },
   { to: "/journal", label: "Daily Journal", icon: "✎" },
+  { to: "/calendar", label: "P&L Calendar", icon: "▦" },
   { to: "/mistakes", label: "Mistakes", icon: "⚠" },
-  { to: "/analytics", label: "Analytics", icon: "◑", phase: 5 },
+  { to: "/analytics", label: "Breakdowns", icon: "◑" },
   { to: "/prop", label: "Prop Tracker", icon: "◈", phase: 6 },
   { to: "/data", label: "Import / Export", icon: "⤓" },
   { to: "/settings", label: "Settings", icon: "⚙" },

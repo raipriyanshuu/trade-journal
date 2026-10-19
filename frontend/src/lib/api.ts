@@ -294,6 +294,24 @@ export const api = {
     request<any>(`/api/mistakes/flags/${id}/dismiss`, { method: "POST", body: JSON.stringify({ dismissed }) }),
   deleteFlag: (id: number) => request<void>(`/api/mistakes/flags/${id}`, { method: "DELETE" }),
   recomputeMistakes: () => request<{ flags: number }>("/api/mistakes/recompute", { method: "POST" }),
+
+  // Analytics
+  dashboard: (filters: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<any>(`/api/analytics/dashboard?${qs}`);
+  },
+  calendar: (filters: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<Record<string, { net: number; trades: number; win_rate: number }>>(`/api/analytics/calendar?${qs}`);
+  },
+  breakdown: (dimension: string, filters: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams({ dimension });
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<Array<{ key: string; trades: number; win_rate: number; net_pnl: string; avg_pnl: number; profit_factor: number | null; expectancy_r: number | null }>>(`/api/analytics/breakdown?${qs}`);
+  },
+  dimensions: () => request<string[]>("/api/analytics/dimensions"),
   getMistakeRules: () => request<{ rules: Record<string, any>; explanations: Record<string, string> }>("/api/mistakes/rules"),
   mistakeDrilldown: (type: string, filters: Record<string, string | number | undefined> = {}) => {
     const qs = new URLSearchParams({ type });

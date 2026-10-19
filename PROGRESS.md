@@ -179,6 +179,24 @@ edit rebuild, and result/direction filters.
 
 ---
 
-## Next: Phase 5 — Dashboard and analytics
-KPI dashboard, equity/drawdown/daily-P&L/R-distribution charts, the monthly P&L
-calendar, and the Breakdowns page sliced every useful way.
+## Phase 5 — Dashboard and analytics ✅ (complete)
+
+- **Dashboard:** full KPI grid (net P&L per currency, win rate, profit factor,
+  expectancy $/R, avg win/loss & ratio, max drawdown $/%, largest win/loss,
+  win/loss streaks, avg holding winners vs losers) plus cumulative P&L (area),
+  drawdown, daily P&L bars and the R-multiple distribution histogram.
+- **P&L calendar:** monthly heatmap of daily net P&L with trade counts and win%,
+  weekly totals column, month nav; clicking a day opens that day's journal.
+- **Breakdowns:** every dimension from the spec — instrument, account, direction,
+  time-in-session, clock time (IST), weekday, setup tag, scenario, planned,
+  checklist score, VWAP, entry location, day type, opening type, holding bucket,
+  position size — each with trades, win%, net, avg, PF, expectancy R + bar chart.
+- Global analytics filter bar (account, instrument, currency, date range, demo),
+  reused across Dashboard, Mistakes, Calendar and Breakdowns.
+- 4 analytics tests. **68 tests total.**
+
+---
+
+## Next: Phase 6 — Prop-firm tracker
+Per-account prop rules, live status cards (balance, target, daily loss, drawdown
+floor, consistency, trading days), colour warnings, and balance-vs-floor history.
