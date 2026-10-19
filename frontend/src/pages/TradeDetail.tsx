@@ -207,6 +207,8 @@ export default function TradeDetail() {
             )}
           </Section>
 
+          <FlagsSection tradeId={trade.id} />
+
           <Section title="Notes">
             <p className="text-sm text-ink-muted whitespace-pre-wrap">{trade.notes || "No notes."}</p>
           </Section>
@@ -222,6 +224,45 @@ export default function TradeDetail() {
         <ExecutionEditModal exec={editExec} tz={tz} onClose={() => setEditExec(null)} onSaved={() => { setEditExec(null); load(); }} />
       )}
     </div>
+  );
+}
+
+function FlagsSection({ tradeId }: { tradeId: number }) {
+  const [flags, setFlags] = useState<Awaited<ReturnType<typeof api.listFlags>>>([]);
+  const [adding, setAdding] = useState("");
+
+  const reload = useCallback(() => { api.listFlags(tradeId).then(setFlags); }, [tradeId]);
+  useEffect(reload, [reload]);
+
+  async function addManual() {
+    if (!adding.trim()) return;
+    await api.addFlag(tradeId, adding.trim(), "manual flag");
+    setAdding("");
+    reload();
+  }
+
+  return (
+    <Section title="Mistake flags">
+      {flags.length === 0 && <p className="text-ink-faint text-sm mb-2">No flags.</p>}
+      <div className="space-y-1.5 mb-2">
+        {flags.map((f) => (
+          <div key={f.id} className={`flex items-center gap-2 text-sm ${f.dismissed ? "opacity-50" : ""}`}>
+            <span className={`badge ${f.source === "auto" ? "bg-warn/15 text-warn" : "bg-neg/15 text-neg"}`}>{f.source}</span>
+            <span className="font-mono text-xs flex-1" title={f.explanation}>{f.rule_code}</span>
+            <button className="text-xs text-ink-faint hover:text-ink" onClick={() => api.dismissFlag(f.id, !f.dismissed).then(reload)}>
+              {f.dismissed ? "restore" : "dismiss"}
+            </button>
+            {f.source === "manual" && (
+              <button className="text-xs text-ink-faint hover:text-neg" onClick={() => api.deleteFlag(f.id).then(reload)}>&times;</button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        <input className="input !py-1 text-xs" placeholder="add manual flag (e.g. CHASED)" value={adding} onChange={(e) => setAdding(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addManual()} />
+        <button className="btn-ghost !py-1 text-xs" onClick={addManual}>Add</button>
+      </div>
+    </Section>
   );
 }
 

@@ -326,6 +326,10 @@ def run_import(db: Session, *, content: bytes, config: dict) -> dict:
     batch.details = "\n".join(errors[:50])
     db.commit()
 
+    from app.core.mistakes import recompute_for_account
+
+    recompute_for_account(db, account_id)
+
     return {
         "batch_id": batch.id,
         "rows_read": read,
@@ -352,4 +356,8 @@ def undo_batch(db: Session, batch_id: int) -> dict:
         rebuild_for(db, acc_id, inst_id)
     db.delete(batch)
     db.commit()
+    from app.core.mistakes import recompute_for_account
+
+    for acc_id in {a for a, _ in affected}:
+        recompute_for_account(db, acc_id)
     return {"status": "undone"}

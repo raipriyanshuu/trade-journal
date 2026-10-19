@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.mistakes import recompute_for_account
 from app.core.results import breakeven_threshold, serialize_detail, serialize_summary, trade_result
 from app.core.trade_builder import rebuild_for
 from app.db import get_db
@@ -168,7 +169,8 @@ def create_manual(payload: ManualTradeCreate, db: Session = Depends(get_db)):
         raise HTTPException(500, "Trade builder did not produce a trade")
 
     _apply_trade_meta(db, trade, payload)
-    return serialize_detail(db, trade)
+    recompute_for_account(db, acc.id)
+    return serialize_detail(db, _get_trade_or_404(db, trade.id))
 
 
 def _apply_trade_meta(db: Session, trade: Trade, payload: ManualTradeCreate) -> None:
@@ -213,7 +215,8 @@ def update_trade(trade_id: int, payload: TradeUpdate, db: Session = Depends(get_
     from app.core.trade_builder import recompute_trade_r
 
     recompute_trade_r(db, trade)
-    return serialize_detail(db, trade)
+    recompute_for_account(db, trade.account_id)
+    return serialize_detail(db, _get_trade_or_404(db, trade_id))
 
 
 @router.delete("/{trade_id}", status_code=204)
@@ -226,3 +229,4 @@ def delete_trade(trade_id: int, db: Session = Depends(get_db)):
     db.delete(trade)
     db.commit()
     rebuild_for(db, account_id, instrument_id)
+    recompute_for_account(db, account_id)

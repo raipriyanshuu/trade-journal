@@ -158,7 +158,27 @@ edit rebuild, and result/direction filters.
 
 ---
 
-## Next: Phase 4 — Mistake engine
-Configurable auto rules (REVENGE, TWO_STRIKES, OVERTRADING, etc.), the Mistakes
-page (cost of mistakes, clean vs mistake, when they happen, after-loss, streaks),
-with dismissible false positives that survive rebuilds.
+## Phase 4 — Mistake engine ✅ (complete)
+
+- **13 configurable auto rules** (`app/core/mistakes.py`): REVENGE, TWO_STRIKES,
+  OVERTRADING, AFTER_DAILY_LIMIT, LOSS_EXCEEDS_PLAN, NO_STOP, OVERSIZE,
+  ADDED_TO_LOSER, FIRST_MINUTES, NEWS_WINDOW, UNPLANNED, FADED_TREND_DAY,
+  HELD_LOSERS. Each has a plain-English explanation and editable thresholds;
+  each can be switched on/off (Settings → Mistake rules).
+- The engine **re-runs automatically** after any trade/execution/import/journal
+  change, for the affected account. **Dismissed false positives survive rebuilds.**
+- Manual mistake flags/tags and auto flags both count as mistakes.
+- **Mistakes page:** cost of mistakes ranked by $ (with drill-down to trades),
+  clean-vs-mistake stat comparison, the **actual vs without-mistakes equity
+  overlay**, when mistakes happen (by weekday / time-in-session / trade number),
+  after-loss behaviour, weekly trend, and the **clean streak** (days since last
+  violation + best).
+- Trade detail shows flags with dismiss/restore and manual-flag add.
+- Shared `stats.py` (win rate, PF, expectancy $/R, drawdown, streaks) reused in
+  Phase 5. 9 engine tests. **64 tests total.**
+
+---
+
+## Next: Phase 5 — Dashboard and analytics
+KPI dashboard, equity/drawdown/daily-P&L/R-distribution charts, the monthly P&L
+calendar, and the Breakdowns page sliced every useful way.

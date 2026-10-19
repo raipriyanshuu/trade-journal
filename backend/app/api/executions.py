@@ -7,6 +7,7 @@ from datetime import timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.mistakes import recompute_for_account
 from app.core.trade_builder import rebuild_for
 from app.db import get_db
 from app.models import Execution
@@ -29,6 +30,7 @@ def update_execution(execution_id: int, payload: ExecutionUpdate, db: Session = 
     account_id, instrument_id = ex.account_id, ex.instrument_id
     db.commit()
     rebuild_for(db, account_id, instrument_id)
+    recompute_for_account(db, account_id)
     return db.get(Execution, execution_id)
 
 
@@ -41,3 +43,4 @@ def delete_execution(execution_id: int, db: Session = Depends(get_db)):
     db.delete(ex)
     db.commit()
     rebuild_for(db, account_id, instrument_id)
+    recompute_for_account(db, account_id)

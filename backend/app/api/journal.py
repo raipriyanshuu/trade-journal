@@ -48,6 +48,10 @@ def upsert_session(payload: DailySessionUpsert, db: Session = Depends(get_db)):
             setattr(existing, field, value)
     db.commit()
     db.refresh(existing)
+    if existing.account_id:
+        from app.core.mistakes import recompute_for_account
+
+        recompute_for_account(db, existing.account_id)
     return existing
 
 

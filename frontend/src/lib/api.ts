@@ -280,6 +280,27 @@ export const api = {
       body: JSON.stringify({ trade_ids: tradeIds, add, remove }),
     }),
 
+  // Mistakes
+  mistakesAnalytics: (filters: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<any>(`/api/mistakes/analytics?${qs}`);
+  },
+  listFlags: (tradeId: number) =>
+    request<Array<{ id: number; trade_id: number | null; rule_code: string; source: string; details: string; dismissed: boolean; explanation: string }>>(`/api/mistakes/flags?trade_id=${tradeId}`),
+  addFlag: (tradeId: number, ruleCode: string, details = "") =>
+    request<any>("/api/mistakes/flags", { method: "POST", body: JSON.stringify({ trade_id: tradeId, rule_code: ruleCode, details }) }),
+  dismissFlag: (id: number, dismissed: boolean) =>
+    request<any>(`/api/mistakes/flags/${id}/dismiss`, { method: "POST", body: JSON.stringify({ dismissed }) }),
+  deleteFlag: (id: number) => request<void>(`/api/mistakes/flags/${id}`, { method: "DELETE" }),
+  recomputeMistakes: () => request<{ flags: number }>("/api/mistakes/recompute", { method: "POST" }),
+  getMistakeRules: () => request<{ rules: Record<string, any>; explanations: Record<string, string> }>("/api/mistakes/rules"),
+  mistakeDrilldown: (type: string, filters: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams({ type });
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<TradeSummary[]>(`/api/mistakes/drilldown?${qs}`);
+  },
+
   // Trades
   listTrades: (filters: TradeFilters = {}) => {
     const qs = new URLSearchParams();
