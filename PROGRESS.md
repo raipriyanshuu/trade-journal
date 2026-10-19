@@ -115,6 +115,31 @@ edit rebuild, and result/direction filters.
 
 ---
 
-## Next: Phase 2 — CSV import, Notion migration and export
-Generic CSV importer with a mapping wizard (fills + round-trip), duplicate
-detection, import history with undo, Notion migration, and CSV/Excel/backup export.
+## Phase 2 — CSV import, Notion migration and export ✅ (complete)
+
+- **Generic CSV importer** (`app/core/importing.py`) through the same pipeline:
+  rows → executions → trade builder. Two formats: **fills** (one row per
+  execution) and **round-trip** (one row per trade, converted to entry+exit
+  executions). Mapping of columns → fields, date/time format + file time zone,
+  quantity unit (lots/units, normalized to lots), and symbol mapping
+  (explicit map + longest-prefix auto-detect: `ESZ6`→ES, `NIFTY26OCTFUT`→NIFTY).
+- **Mapping profiles** saved/loaded by name for reuse.
+- **Duplicate detection** by external id or a content hash; summary of read /
+  imported / skipped / failed with per-row reasons.
+- **Import history** with whole-batch **undo**.
+- **Notion migration:** multi-select columns → tags, missing times → session
+  open with `time_known=false`, and **P&L-only trades** (no prices) created
+  directly and excluded from point/R stats (preserved across rebuilds).
+- **Export:** trades & executions CSV, a full **Excel workbook** (trades,
+  executions, tags, daily_sessions, mistake_flags), and a one-click **backup
+  zip** (consistent SQLite snapshot + attachments) with **restore**.
+- Frontend **Import / Export** page: mapping wizard with live preview, import
+  history + undo, export/backup/restore.
+- 7 import tests (symbol resolution, fills, round-trip units→lots, duplicates,
+  undo, Notion P&L-only + tags, P&L-only survives rebuild). **50 tests total.**
+
+---
+
+## Next: Phase 3 — Context, tagging and the daily journal
+Tag management (create/rename/merge/archive), quick + bulk tagging, inline
+context editing, and the daily journal (morning plan + evening review per date).

@@ -7,6 +7,7 @@ import Journal from "./pages/Journal";
 import Mistakes from "./pages/Mistakes";
 import Analytics from "./pages/Analytics";
 import PropTracker from "./pages/PropTracker";
+import Data from "./pages/Data";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="mistakes" element={<Mistakes />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="prop" element={<PropTracker />} />
+        <Route path="data" element={<Data />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

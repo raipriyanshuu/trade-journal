@@ -14,6 +14,7 @@ const NAV: NavItem[] = [
   { to: "/mistakes", label: "Mistakes", icon: "⚠", phase: 4 },
   { to: "/analytics", label: "Analytics", icon: "◑", phase: 5 },
   { to: "/prop", label: "Prop Tracker", icon: "◈", phase: 6 },
+  { to: "/data", label: "Import / Export", icon: "⤓" },
   { to: "/settings", label: "Settings", icon: "⚙" },
 ];
 

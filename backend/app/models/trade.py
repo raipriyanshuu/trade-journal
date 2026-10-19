@@ -56,6 +56,11 @@ class Trade(Base, TimestampMixin, DemoMixin):
     holding_time_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="open")
     source: Mapped[str] = mapped_column(String, nullable=False, default="manual")
+    # Set only on P&L-only / price-less imported trades, so a batch undo can
+    # remove them (trades built from executions are removed via their executions).
+    import_batch_id: Mapped[int | None] = mapped_column(
+        ForeignKey("import_batches.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     self_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)

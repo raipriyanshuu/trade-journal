@@ -241,6 +241,43 @@ export const api = {
     request<ExecutionRow>(`/api/executions/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteExecution: (id: number) => request<void>(`/api/executions/${id}`, { method: "DELETE" }),
 
+  // Import
+  previewImport: async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/import/preview", { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`${res.status}: preview failed`);
+    return res.json() as Promise<{ headers: string[]; rows: Record<string, string>[]; delimiter: string }>;
+  },
+  runImport: async (file: File, config: Record<string, unknown>) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("config", JSON.stringify(config));
+    const res = await fetch("/api/import/run", { method: "POST", body: fd });
+    if (!res.ok) {
+      let detail = "import failed";
+      try { detail = (await res.json()).detail ?? detail; } catch { /* */ }
+      throw new Error(`${res.status}: ${detail}`);
+    }
+    return res.json() as Promise<{ batch_id: number; rows_read: number; imported: number; skipped: number; failed: number; errors: string[] }>;
+  },
+  listBatches: () =>
+    request<Array<{ id: number; source: string; filename: string | null; rows_read: number; rows_imported: number; rows_skipped: number; rows_failed: number; status: string; created_at: string; profile_name: string | null }>>("/api/import/batches"),
+  undoBatch: (id: number) => request<{ status: string }>(`/api/import/batches/${id}`, { method: "DELETE" }),
+  listProfiles: () =>
+    request<Array<{ id: number; name: string; format: string; config: Record<string, unknown> }>>("/api/import/profiles"),
+  saveProfile: (name: string, format: string, config: Record<string, unknown>) =>
+    request<{ id: number }>("/api/import/profiles", { method: "POST", body: JSON.stringify({ name, format, config }) }),
+  deleteProfile: (id: number) => request<void>(`/api/import/profiles/${id}`, { method: "DELETE" }),
+
+  restoreBackup: async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/export/restore", { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`${res.status}: restore failed`);
+    return res.json() as Promise<{ status: string; message?: string }>;
+  },
+
   // Attachments
   uploadAttachment: async (tradeId: number, file: File | Blob, filename = "paste.png") => {
     const fd = new FormData();

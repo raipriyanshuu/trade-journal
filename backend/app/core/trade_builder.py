@@ -251,11 +251,17 @@ def rebuild_for(
             meta_by_anchor[anchor] = merged
 
     # Detach attachments so the trade delete-cascade does not remove them.
-    old_trade_ids = db.scalars(
-        select(Trade.id).where(
-            Trade.account_id == account_id, Trade.instrument_id == instrument_id
-        )
-    ).all()
+    # Rebuild every execution-derived trade; P&L-only imported trades (created
+    # directly, pnl_only=True) are never built from executions, so keep them.
+    old_trade_ids = list(
+        db.scalars(
+            select(Trade.id).where(
+                Trade.account_id == account_id,
+                Trade.instrument_id == instrument_id,
+                Trade.pnl_only.is_(False),
+            )
+        ).all()
+    )
     if old_trade_ids:
         for att in db.scalars(
             select(Attachment).where(Attachment.trade_id.in_(old_trade_ids))

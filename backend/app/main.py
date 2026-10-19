@@ -10,6 +10,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import accounts, attachments, demo, executions, health, instruments, tags, trades
+from app.api import export as export_api
+from app.api import importing as import_api
 from app.api import settings as settings_api
 from app.config import settings
 from app.db import SessionLocal
@@ -48,6 +50,8 @@ app.include_router(tags.router)
 app.include_router(trades.router)
 app.include_router(executions.router)
 app.include_router(attachments.router)
+app.include_router(import_api.router)
+app.include_router(export_api.router)
 
 # Serve uploaded screenshots.
 settings.ensure_dirs()
