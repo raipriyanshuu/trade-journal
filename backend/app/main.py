@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import accounts, demo, health, instruments
+from app.api import accounts, attachments, demo, executions, health, instruments, tags, trades
 from app.api import settings as settings_api
 from app.config import settings
 from app.db import SessionLocal
@@ -44,6 +44,14 @@ app.include_router(instruments.router)
 app.include_router(accounts.router)
 app.include_router(settings_api.router)
 app.include_router(demo.router)
+app.include_router(tags.router)
+app.include_router(trades.router)
+app.include_router(executions.router)
+app.include_router(attachments.router)
+
+# Serve uploaded screenshots.
+settings.ensure_dirs()
+app.mount("/attachments", StaticFiles(directory=settings.attachments_dir), name="attachments")
 
 
 # --- Serve the built frontend (frontend/dist) with SPA fallback ---

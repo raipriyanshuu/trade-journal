@@ -36,6 +36,9 @@ class Trade(Base, TimestampMixin, DemoMixin):
     trading_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
 
     max_position_size: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
+    # Price of the first entry fill (chronologically); used for the R-multiple
+    # formula and kept here so it survives position flips and rebuilds.
+    first_entry_price: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)
     avg_entry: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)
     avg_exit: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)
     points: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)
@@ -71,3 +74,6 @@ class Trade(Base, TimestampMixin, DemoMixin):
 
     executions = relationship("Execution", backref="trade", foreign_keys="Execution.trade_id")
     tags = relationship("Tag", secondary="trade_tags", back_populates="trades")
+    instrument = relationship("Instrument", lazy="joined")
+    account = relationship("Account", lazy="joined")
+    attachments = relationship("Attachment", foreign_keys="Attachment.trade_id", viewonly=True)

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import TradeLog from "./pages/TradeLog";
+import TradeDetail from "./pages/TradeDetail";
 import Journal from "./pages/Journal";
 import Mistakes from "./pages/Mistakes";
 import Analytics from "./pages/Analytics";
@@ -14,6 +15,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="trades" element={<TradeLog />} />
+        <Route path="trades/:id" element={<TradeDetail />} />
         <Route path="journal" element={<Journal />} />
         <Route path="mistakes" element={<Mistakes />} />
         <Route path="analytics" element={<Analytics />} />

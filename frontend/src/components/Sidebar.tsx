@@ -9,7 +9,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: "■", phase: 5 },
-  { to: "/trades", label: "Trade Log", icon: "≡", phase: 1 },
+  { to: "/trades", label: "Trade Log", icon: "≡" },
   { to: "/journal", label: "Daily Journal", icon: "✎", phase: 3 },
   { to: "/mistakes", label: "Mistakes", icon: "⚠", phase: 4 },
   { to: "/analytics", label: "Analytics", icon: "◑", phase: 5 },

@@ -59,7 +59,62 @@ instruments/accounts/settings, and the demo load/clear round-trip. Run with
 
 ---
 
-## Next: Phase 1 — Trade engine and manual entry
-The trade builder (executions → trades), R-multiple logic, trading-date assignment
-per session rules (incl. CME across midnight IST and US DST changes), the manual
-entry form (scale in/out), the trade log and the trade detail page, with tests.
+## Phase 1 — Trade engine and manual entry ✅ (complete)
+
+### What was built
+
+**Trade builder** (`app/core/trade_builder.py`) — the only code that creates trades:
+- Per account+instrument, executions sorted by time with net-position tracking.
+- A trade opens when position leaves zero and closes when it returns to zero.
+- A flipping fill (e.g. long 2 → short 1) is split: part closes the current
+  trade, the rest opens a new one in the opposite direction.
+- Size-weighted average entry/exit. Realized P&L = (sell value − buy value) ×
+  point value − fees. Open trades (not flat) stay `open` with partial realized P&L.
+- User metadata (stop, target, risk, context, tags, notes, rating, attachments)
+  is **preserved across rebuilds** by anchoring to the trade's earliest execution.
+- Rebuild re-runs automatically after any create, edit, delete or import.
+
+**Sessions / trading dates** (`app/core/sessions.py`):
+- Trading-date assignment per instrument session rules, via `zoneinfo` (added
+  `tzdata`), correct across US daylight-saving changes. CME overnight fills roll
+  to the next trading day; NSE/MCX use the local calendar date.
+
+**R-multiple:** planned risk if given, else `|first entry − stop| × max size ×
+point value`; empty when neither exists (excluded from R stats).
+
+**Manual entry** (`POST /api/trades/manual`): account, instrument, direction,
+multiple entries/exits (scale in/out) with time+price+qty, stop/target/risk/fees,
+full context fields and tags. Creates executions, then runs the builder — the
+same pipeline as imports.
+
+**APIs:** trades (list with filters: date range, account, instrument, direction,
+result, status, scenario, source, tag; + detail, edit, delete), executions
+(edit/delete → rebuild), attachments (upload + paste, delete), tags (list/create).
+
+**Frontend:**
+- **Trade Log**: filter bar, per-currency P&L chips (USD and INR never mixed),
+  sortable table, row → detail.
+- **Manual entry form**: dynamic entry/exit legs, direction toggle, live
+  risk/planned-R preview, context + tags + notes.
+- **Trade detail**: computed KPIs, executions (inline edit/delete), context edit,
+  notes, screenshots (upload + clipboard paste), delete trade.
+
+### Tests (43 total, all passing)
+`test_trade_builder.py` covers simple long/short, scale in/out, partial fills,
+position flip, two trades in a day, open position at end, fees, Nifty & MCX point
+values, R-from-stop, R-from-planned-risk, and metadata preservation.
+`test_sessions.py` covers CME overnight/daytime, DST stability, NSE and MCX.
+`test_trades_api.py` covers manual entry, naive-time→UTC, edits, delete, execution
+edit rebuild, and result/direction filters.
+
+### Known limitations
+- Manual-entry times use the browser's local clock (assumed = display tz, IST).
+- Trade↔execution linking assigns a flipping fill to the first trade it touches
+  (R and P&L are unaffected; `first_entry_price` is stored for exact R).
+- Bulk tagging, CSV/Notion import, the daily journal and analytics come later.
+
+---
+
+## Next: Phase 2 — CSV import, Notion migration and export
+Generic CSV importer with a mapping wizard (fills + round-trip), duplicate
+detection, import history with undo, Notion migration, and CSV/Excel/backup export.

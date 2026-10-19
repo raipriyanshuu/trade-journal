@@ -26,10 +26,11 @@ only code that creates trades, so every path produces identical results.
 
 ## Run it
 
-**Windows:**
+**Windows:** double-click `start.bat`, or in a terminal run it with a leading
+`.\` (PowerShell does not run programs from the current folder without it):
 
 ```bat
-start.bat
+.\start.bat
 ```
 
 **macOS / Linux:**
