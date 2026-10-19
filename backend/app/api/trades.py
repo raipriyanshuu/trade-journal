@@ -11,6 +11,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -88,6 +89,33 @@ def list_trades(
             continue
         rows.append(row)
     return rows
+
+
+class BulkTagRequest(BaseModel):
+    trade_ids: list[int]
+    add: list[int] = []
+    remove: list[int] = []
+
+
+@router.post("/bulk-tag")
+def bulk_tag(payload: BulkTagRequest, db: Session = Depends(get_db)) -> dict:
+    for trade_id in payload.trade_ids:
+        for tag_id in payload.add:
+            exists = db.scalar(
+                select(trade_tags.c.tag_id).where(
+                    trade_tags.c.trade_id == trade_id, trade_tags.c.tag_id == tag_id
+                )
+            )
+            if not exists:
+                db.execute(trade_tags.insert().values(trade_id=trade_id, tag_id=tag_id))
+        for tag_id in payload.remove:
+            db.execute(
+                trade_tags.delete().where(
+                    trade_tags.c.trade_id == trade_id, trade_tags.c.tag_id == tag_id
+                )
+            )
+    db.commit()
+    return {"updated": len(payload.trade_ids)}
 
 
 @router.get("/{trade_id}", response_model=TradeDetail)

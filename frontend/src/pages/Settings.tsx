@@ -2,11 +2,13 @@ import { useState } from "react";
 import InstrumentsTab from "../components/settings/InstrumentsTab";
 import AccountsTab from "../components/settings/AccountsTab";
 import PreferencesTab from "../components/settings/PreferencesTab";
+import TagsTab from "../components/settings/TagsTab";
 import DemoTab from "../components/settings/DemoTab";
 
 const TABS = [
   { key: "instruments", label: "Instruments" },
   { key: "accounts", label: "Accounts" },
+  { key: "tags", label: "Tags" },
   { key: "preferences", label: "Preferences" },
   { key: "demo", label: "Demo Data" },
 ] as const;
@@ -37,6 +39,7 @@ export default function Settings() {
 
       {tab === "instruments" && <InstrumentsTab />}
       {tab === "accounts" && <AccountsTab />}
+      {tab === "tags" && <TagsTab />}
       {tab === "preferences" && <PreferencesTab />}
       {tab === "demo" && <DemoTab />}
     </div>

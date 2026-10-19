@@ -145,6 +145,37 @@ export interface ManualTradePayload {
   time_known?: boolean;
 }
 
+export interface DailySession {
+  id: number;
+  account_id: number | null;
+  instrument_id: number | null;
+  trading_date: string;
+  htf_read: string;
+  prior_day_type: string | null;
+  prior_profile_shape: string | null;
+  prior_vah: string | null;
+  prior_poc: string | null;
+  prior_val: string | null;
+  on_high: string | null;
+  on_low: string | null;
+  on_poc: string | null;
+  on_vwap: string | null;
+  on_range_vs_atr: string | null;
+  on_inventory: string | null;
+  expected_open_location: string | null;
+  levels: { label: string; price: string }[];
+  scenarios: Record<string, unknown>[];
+  news_events: Record<string, unknown>[];
+  actual_opening_type: string | null;
+  actual_day_type: string | null;
+  scenario_played_out: string | null;
+  followed_plan: string | null;
+  what_to_repeat: string;
+  what_to_change: string;
+  mood: number | null;
+  sleep: number | null;
+}
+
 export interface TradeFilters {
   date_from?: string;
   date_to?: string;
@@ -218,7 +249,36 @@ export const api = {
   clearDemo: () => request<Record<string, unknown>>("/api/demo/clear", { method: "POST" }),
 
   // Tags
-  listTags: () => request<Tag[]>("/api/tags"),
+  listTags: (includeArchived = false) =>
+    request<Tag[]>(`/api/tags${includeArchived ? "?include_archived=true" : ""}`),
+  createTag: (name: string, category: string) =>
+    request<Tag>("/api/tags", { method: "POST", body: JSON.stringify({ name, category }) }),
+  updateTag: (id: number, patch: { name?: string; category?: string; archived?: boolean }) =>
+    request<Tag>(`/api/tags/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  mergeTags: (id: number, intoId: number) =>
+    request<Tag>(`/api/tags/${id}/merge/${intoId}`, { method: "POST" }),
+  deleteTag: (id: number) => request<void>(`/api/tags/${id}`, { method: "DELETE" }),
+
+  // Journal
+  getJournal: (date: string, accountId?: number | null, instrumentId?: number | null) => {
+    const qs = new URLSearchParams({ trading_date: date });
+    if (accountId) qs.append("account_id", String(accountId));
+    if (instrumentId) qs.append("instrument_id", String(instrumentId));
+    return request<DailySession | null>(`/api/journal?${qs}`);
+  },
+  previousJournal: (date: string, accountId?: number | null, instrumentId?: number | null) => {
+    const qs = new URLSearchParams({ trading_date: date });
+    if (accountId) qs.append("account_id", String(accountId));
+    if (instrumentId) qs.append("instrument_id", String(instrumentId));
+    return request<DailySession | null>(`/api/journal/previous?${qs}`);
+  },
+  upsertJournal: (payload: Partial<DailySession> & { trading_date: string }) =>
+    request<DailySession>("/api/journal", { method: "PUT", body: JSON.stringify(payload) }),
+  bulkTag: (tradeIds: number[], add: number[], remove: number[]) =>
+    request<{ updated: number }>("/api/trades/bulk-tag", {
+      method: "POST",
+      body: JSON.stringify({ trade_ids: tradeIds, add, remove }),
+    }),
 
   // Trades
   listTrades: (filters: TradeFilters = {}) => {

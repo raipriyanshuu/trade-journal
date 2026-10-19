@@ -140,6 +140,25 @@ edit rebuild, and result/direction filters.
 
 ---
 
-## Next: Phase 3 — Context, tagging and the daily journal
-Tag management (create/rename/merge/archive), quick + bulk tagging, inline
-context editing, and the daily journal (morning plan + evening review per date).
+## Phase 3 — Context, tagging and the daily journal ✅ (complete)
+
+- **Tag management:** create, rename, archive/unarchive, delete and **merge**
+  (move all trades onto another tag), by category — in Settings → Tags.
+- **Bulk tagging** from the Trade Log: select rows, add/remove a tag across all.
+- **Daily journal** page per trading date + account:
+  - Morning plan: HTF read, prior day type/shape, prior VAH/POC/VAL, overnight
+    high/low/POC/VWAP, range-vs-ATR, inventory, expected open, up to 6 levels,
+    scenarios A/B/C (trigger/entry/stop/targets/invalidation), news events.
+  - Evening review: actual opening/day type, scenario played out, followed plan,
+    what to repeat/change, mood & sleep.
+  - That day's trades listed with day P&L; **copy previous levels** helper.
+  - Journal screenshots (upload endpoint).
+- 5 new tests (journal upsert/copy, tag rename/archive/merge, bulk tag).
+  **55 tests total.**
+
+---
+
+## Next: Phase 4 — Mistake engine
+Configurable auto rules (REVENGE, TWO_STRIKES, OVERTRADING, etc.), the Mistakes
+page (cost of mistakes, clean vs mistake, when they happen, after-loss, streaks),
+with dismissible false positives that survive rebuilds.

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import accounts, attachments, demo, executions, health, instruments, tags, trades
+from app.api import accounts, attachments, demo, executions, health, instruments, journal, tags, trades
 from app.api import export as export_api
 from app.api import importing as import_api
 from app.api import settings as settings_api
@@ -47,6 +47,7 @@ app.include_router(accounts.router)
 app.include_router(settings_api.router)
 app.include_router(demo.router)
 app.include_router(tags.router)
+app.include_router(journal.router)
 app.include_router(trades.router)
 app.include_router(executions.router)
 app.include_router(attachments.router)

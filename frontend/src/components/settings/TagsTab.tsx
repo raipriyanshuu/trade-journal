@@ -1,0 +1,117 @@
+import { useEffect, useState } from "react";
+import { api, Tag } from "../../lib/api";
+
+const CATEGORIES = ["setup", "mistake", "emotion", "custom"];
+
+export default function TagsTab() {
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newCat, setNewCat] = useState("setup");
+  const [mergeFrom, setMergeFrom] = useState<number | "">("");
+  const [mergeInto, setMergeInto] = useState<number | "">("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+
+  function load() {
+    api.listTags(true).then(setTags);
+  }
+  useEffect(load, []);
+
+  async function create() {
+    if (!newName) return;
+    await api.createTag(newName, newCat);
+    setNewName("");
+    load();
+  }
+  async function rename(id: number) {
+    await api.updateTag(id, { name: editName });
+    setEditingId(null);
+    load();
+  }
+  async function toggleArchive(t: Tag & { archived?: boolean }) {
+    await api.updateTag(t.id, { archived: !(t as { archived?: boolean }).archived });
+    load();
+  }
+  async function remove(id: number) {
+    if (!confirm("Delete this tag? It is removed from all trades.")) return;
+    await api.deleteTag(id);
+    load();
+  }
+  async function doMerge() {
+    if (!mergeFrom || !mergeInto || mergeFrom === mergeInto) return;
+    await api.mergeTags(Number(mergeFrom), Number(mergeInto));
+    setMergeFrom("");
+    setMergeInto("");
+    load();
+  }
+
+  return (
+    <div className="space-y-5 max-w-3xl">
+      <div className="card p-4 flex flex-wrap items-end gap-2">
+        <div>
+          <label className="label">New tag</label>
+          <input className="input !w-48" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="name" />
+        </div>
+        <div>
+          <label className="label">Category</label>
+          <select className="input !w-auto" value={newCat} onChange={(e) => setNewCat(e.target.value)}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <button className="btn-primary" onClick={create}>Add tag</button>
+      </div>
+
+      {CATEGORIES.map((cat) => {
+        const rows = tags.filter((t) => t.category === cat);
+        if (rows.length === 0) return null;
+        return (
+          <div key={cat} className="card p-4">
+            <h3 className="font-medium text-sm mb-2 capitalize">{cat}</h3>
+            <div className="flex flex-wrap gap-2">
+              {rows.map((t) => {
+                const archived = (t as { archived?: boolean }).archived;
+                return (
+                  <div key={t.id} className={`flex items-center gap-1 rounded-lg px-2 py-1 text-sm ${archived ? "bg-bg-soft text-ink-faint" : "bg-card-hover"}`}>
+                    {editingId === t.id ? (
+                      <input className="input !w-32 !py-0.5" value={editName} onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && rename(t.id)} autoFocus />
+                    ) : (
+                      <span onClick={() => { setEditingId(t.id); setEditName(t.name); }} className="cursor-pointer">{t.name}</span>
+                    )}
+                    <button className="text-ink-faint hover:text-warn text-xs" onClick={() => toggleArchive(t)} title={archived ? "Unarchive" : "Archive"}>
+                      {archived ? "↺" : "⚑"}
+                    </button>
+                    <button className="text-ink-faint hover:text-neg text-xs" onClick={() => remove(t.id)}>&times;</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="card p-4">
+        <h3 className="font-medium text-sm mb-2">Merge tags</h3>
+        <div className="flex items-end gap-2">
+          <div>
+            <label className="label">From</label>
+            <select className="input !w-auto" value={mergeFrom} onChange={(e) => setMergeFrom(Number(e.target.value))}>
+              <option value="">&mdash;</option>
+              {tags.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.category})</option>)}
+            </select>
+          </div>
+          <span className="text-ink-faint pb-2">&rarr;</span>
+          <div>
+            <label className="label">Into</label>
+            <select className="input !w-auto" value={mergeInto} onChange={(e) => setMergeInto(Number(e.target.value))}>
+              <option value="">&mdash;</option>
+              {tags.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.category})</option>)}
+            </select>
+          </div>
+          <button className="btn-ghost" onClick={doMerge}>Merge</button>
+        </div>
+        <p className="text-xs text-ink-faint mt-2">All trades on "From" move to "Into", then "From" is deleted.</p>
+      </div>
+    </div>
+  );
+}

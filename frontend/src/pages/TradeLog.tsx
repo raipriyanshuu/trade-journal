@@ -16,12 +16,29 @@ const RESULT_BADGE: Record<string, string> = {
 export default function TradeLog() {
   const nav = useNavigate();
   const { tz } = useConfig();
-  const { accounts, instruments } = useReference();
+  const { accounts, instruments, tags } = useReference();
   const [filters, setFilters] = useState<TradeFilters>({ sort_by: "open_time", order: "desc" });
   const [trades, setTrades] = useState<TradeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkTagId, setBulkTagId] = useState<number | "">("");
+
+  function toggleSel(id: number) {
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  async function applyBulkTag(mode: "add" | "remove") {
+    if (!bulkTagId || selected.size === 0) return;
+    await api.bulkTag([...selected], mode === "add" ? [Number(bulkTagId)] : [], mode === "remove" ? [Number(bulkTagId)] : []);
+    setSelected(new Set());
+    load();
+  }
 
   function load() {
     setLoading(true);
@@ -106,6 +123,19 @@ export default function TradeLog() {
         ))}
       </div>
 
+      {selected.size > 0 && (
+        <div className="card p-2 mb-3 flex items-center gap-2 text-sm bg-accent/10">
+          <span className="text-ink">{selected.size} selected</span>
+          <select className="input !w-auto !py-1" value={bulkTagId} onChange={(e) => setBulkTagId(Number(e.target.value))}>
+            <option value="">Pick tag&hellip;</option>
+            {tags.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.category})</option>)}
+          </select>
+          <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("add")}>Add tag</button>
+          <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("remove")}>Remove tag</button>
+          <button className="btn-ghost !py-1 text-xs ml-auto" onClick={() => setSelected(new Set())}>Clear</button>
+        </div>
+      )}
+
       {err && <p className="text-neg text-sm mb-3">{err}</p>}
 
       {loading ? (
@@ -119,6 +149,7 @@ export default function TradeLog() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border">
+                <th className="px-3 py-2 w-8"></th>
                 <th className="px-3 py-2 font-medium">Date</th>
                 <th className="px-3 py-2 font-medium">Time</th>
                 <th className="px-3 py-2 font-medium">Symbol</th>
@@ -140,6 +171,9 @@ export default function TradeLog() {
                   className="border-b border-card-border/50 hover:bg-card-hover cursor-pointer"
                   onClick={() => nav(`/trades/${t.id}`)}
                 >
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSel(t.id)} />
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap">{t.trading_date}</td>
                   <td className="px-3 py-2 text-ink-muted whitespace-nowrap">
                     {t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}
