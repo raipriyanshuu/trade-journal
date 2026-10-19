@@ -1,0 +1,19 @@
+# Python
+backend/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local data: SQLite DB, attachments, backups (never committed)
+data/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Env / editor / OS
+.env
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
