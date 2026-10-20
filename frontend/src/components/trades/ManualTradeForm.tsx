@@ -190,7 +190,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
             <label className="label">Account</label>
             <select className="input" value={accountId} onChange={(e) => setAccountId(Number(e.target.value))}>
               <option value="">Select&hellip;</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currency}){a.is_demo ? " · demo — not for real trades" : ""}</option>)}
             </select>
           </div>
           <div>

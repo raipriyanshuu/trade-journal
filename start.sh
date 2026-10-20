@@ -17,6 +17,7 @@ python -m pip install --upgrade pip >/dev/null
 pip install -q -r backend/requirements.txt
 
 # --- Database migrations ---
+(cd backend && python -m app.core.autobackup pre-migrate)
 echo "[setup] Running database migrations..."
 (cd backend && alembic upgrade head)
 

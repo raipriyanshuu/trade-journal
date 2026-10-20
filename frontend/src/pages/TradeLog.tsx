@@ -95,7 +95,7 @@ export default function TradeLog() {
         <FilterSelect label="Account" value={filters.account_id ?? ""} onChange={(v) => set("account_id", v ? Number(v) : undefined)}>
           <option value="">All</option>
           {accounts.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
+            <option key={a.id} value={a.id}>{a.name}{a.is_demo ? " (demo)" : ""}</option>
           ))}
         </FilterSelect>
         <FilterSelect label="Instrument" value={filters.instrument_id ?? ""} onChange={(v) => set("instrument_id", v ? Number(v) : undefined)}>

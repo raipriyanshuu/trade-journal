@@ -26,7 +26,7 @@ export default function AnalyticsFilterBar({
         <label className="label">Account</label>
         <select className="input !w-auto" value={filters.account_id ?? ""} onChange={(e) => set("account_id", e.target.value ? Number(e.target.value) : undefined)}>
           <option value="">All</option>
-          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}{a.is_demo ? " (demo)" : ""}</option>)}
         </select>
       </div>
       <div>

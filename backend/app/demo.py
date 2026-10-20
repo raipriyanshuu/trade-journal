@@ -266,11 +266,45 @@ def _demo_bars(instrument_id: int) -> list[Bar]:
 
 
 def clear_demo_data(db: Session) -> dict:
+    """Remove demo rows only -- never anything the user logged.
+
+    Deleting an account cascades to its trades, executions and journal days, so a
+    demo account that holds any of the user's own (non-demo) data is kept and
+    converted into a normal account instead of being deleted.
+    """
+    kept: list[str] = []
+    keep_ids: set[int] = set()
+    for acc in db.scalars(select(Account).where(Account.is_demo.is_(True))):
+        has_user_data = any(
+            db.scalar(select(model.id).where(model.account_id == acc.id, model.is_demo.is_(False)).limit(1))
+            is not None
+            for model in (Execution, Trade, DailySession)
+        )
+        if has_user_data:
+            acc.is_demo = False
+            keep_ids.add(acc.id)
+            kept.append(acc.name)
+    db.flush()  # persist the conversions before the bulk deletes below (autoflush is off)
+
     # Delete child rows first to respect foreign keys.
     for model in (Attachment, MistakeFlag, Execution, Trade, DailySession, ImportBatch, Bar, Account):
         db.execute(delete(model).where(model.is_demo.is_(True)))
     db.commit()
-    return {"status": "cleared"}
+
+    # Kept accounts lost their demo executions: rebuild their trades + mistakes.
+    if keep_ids:
+        from app.core.mistakes import recompute_for_account
+        from app.core.trade_builder import rebuild_for
+
+        pairs = db.execute(
+            select(Execution.account_id, Execution.instrument_id)
+            .where(Execution.account_id.in_(keep_ids)).distinct()
+        ).all()
+        for account_id, instrument_id in pairs:
+            rebuild_for(db, account_id, instrument_id)
+        for account_id in keep_ids:
+            recompute_for_account(db, account_id)
+    return {"status": "cleared", "kept_accounts": kept}
 
 
 def demo_status(db: Session) -> dict:

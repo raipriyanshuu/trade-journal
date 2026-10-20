@@ -76,7 +76,7 @@ export default function Reports() {
           <button className="btn-ghost !px-2" onClick={() => setAnchor(shift(anchor, period, 1))}>&rarr;</button>
           <select className="input !w-auto" value={accountId ?? ""} onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : undefined)}>
             <option value="">All accounts</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}{a.is_demo ? " (demo)" : ""}</option>)}
           </select>
           <select className="input !w-auto" value={currency ?? ""} onChange={(e) => setCurrency(e.target.value || undefined)}>
             <option value="">All ccy</option><option value="USD">USD</option><option value="INR">INR</option>

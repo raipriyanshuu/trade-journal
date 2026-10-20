@@ -24,6 +24,13 @@ from app.seeds import seed_all
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     settings.ensure_dirs()
+    # Safety net: snapshot the database at most every 6 hours on startup.
+    from app.core.autobackup import snapshot
+
+    try:
+        snapshot("startup", min_interval_hours=6)
+    except Exception as exc:  # noqa: BLE001 - a failed backup must not block the app
+        print(f"[backup] startup snapshot failed: {exc}")
     # Seed instrument master, default settings and mistake tags if missing.
     with SessionLocal() as db:
         seed_all(db)

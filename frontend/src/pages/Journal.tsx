@@ -131,7 +131,7 @@ export default function Journal() {
           <input type="date" className="input !w-auto" value={date} onChange={(e) => setDate(e.target.value)} />
           <select className="input !w-auto" value={accountId ?? ""} onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : null)}>
             <option value="">All accounts</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}{a.is_demo ? " (demo)" : ""}</option>)}
           </select>
           <button className="btn-primary" onClick={save} disabled={saving}>
             {saving ? "Saving…" : dirty ? "Save" : "Saved"}

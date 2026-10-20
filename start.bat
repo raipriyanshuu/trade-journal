@@ -20,9 +20,10 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM --- Database migrations ---
-echo [setup] Running database migrations...
+REM --- Safety snapshot, then database migrations ---
 pushd backend
+python -m app.core.autobackup pre-migrate
+echo [setup] Running database migrations...
 alembic upgrade head
 popd
 

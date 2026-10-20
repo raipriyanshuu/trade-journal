@@ -47,6 +47,42 @@ def test_demo_showcases_review_features(client):
     assert client.get("/api/bars/coverage").json() == []
 
 
+def test_clear_demo_keeps_trades_logged_on_a_demo_account(client):
+    """A trade the user logs on a DEMO account must survive 'clear demo data'."""
+    client.post("/api/demo/load")
+    demo_acc = next(a for a in client.get("/api/accounts").json() if a["name"].startswith("DEMO Apex"))
+    es = next(i for i in client.get("/api/instruments").json() if i["symbol_root"] == "ES")
+    mine = client.post("/api/trades/manual", json={
+        "account_id": demo_acc["id"], "instrument_id": es["id"], "direction": "long",
+        "entries": [{"time": "2026-10-19T14:00:00Z", "price": "5100", "quantity": "1"}],
+        "exits": [{"time": "2026-10-19T14:20:00Z", "price": "5104", "quantity": "1"}],
+    }).json()
+    assert mine["is_demo"] is False
+
+    res = client.post("/api/demo/clear").json()
+    assert res["kept_accounts"] == [demo_acc["name"]]
+
+    trades = client.get("/api/trades").json()
+    assert len(trades) == 1  # only the user's trade; all demo trades are gone
+    assert trades[0]["net_pnl"] == "200.00" and trades[0]["is_demo"] is False
+    kept = client.get("/api/accounts").json()
+    assert [a["id"] for a in kept] == [demo_acc["id"]] and kept[0]["is_demo"] is False
+
+
+def test_autobackup_snapshot_and_prune(client):
+    from app.core.autobackup import backups_dir, snapshot
+
+    client.post("/api/accounts", json={"name": "Snap"})
+    for f in backups_dir().glob("journal-*.db") if backups_dir().exists() else []:
+        f.unlink()
+    first = snapshot("test")
+    assert first is not None and first.exists()
+    assert snapshot("test", min_interval_hours=6) is None  # too soon
+    for i in range(3):
+        snapshot(f"t{i}", keep=2)
+    assert len(list(backups_dir().glob("journal-*.db"))) == 2
+
+
 def test_clear_demo_preserves_real_accounts(client):
     real = client.post("/api/accounts", json={"name": "Real Account"}).json()
     client.post("/api/demo/load")
