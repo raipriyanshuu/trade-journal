@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.sessions import minutes_since_session_open
-from app.core.stats import avg_holding, basic_stats, equity_and_drawdown, streaks
+from app.core.stats import avg_holding, basic_stats, classify, equity_and_drawdown, streaks
 from app.models import DailySession, Instrument, Trade
 
 ZERO = Decimal("0")
@@ -80,11 +80,13 @@ def calendar(trades: list[Trade]) -> dict:
             continue
         key = t.trading_date.isoformat()
         d = days.setdefault(key, {"net": ZERO, "trades": 0, "wins": 0, "losses": 0})
-        d["net"] += Decimal(t.net_pnl)
+        if t.pnl_known:
+            d["net"] += Decimal(t.net_pnl)
         d["trades"] += 1
-        if Decimal(t.net_pnl) > 0:
+        result = classify(t)
+        if result == "win":
             d["wins"] += 1
-        elif Decimal(t.net_pnl) < 0:
+        elif result == "loss":
             d["losses"] += 1
     return {
         k: {
@@ -145,9 +147,29 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
             return [_holding_bucket(t.holding_time_seconds)]
         if dimension == "position_size":
             return [str(t.max_position_size)]
-        if dimension == "setup_tag":
-            tags = [tag.name for tag in t.tags if tag.category == "setup"]
+        if dimension in ("setup_tag", "location", "probability", "thesis", "mistake_tag"):
+            cat = {"setup_tag": "setup", "mistake_tag": "mistake"}.get(dimension, dimension)
+            tags = [tag.name for tag in t.tags if tag.category == cat]
             return tags or ["(untagged)"]
+        if dimension == "entry_quality":
+            return [t.entry_quality or "(unset)"]
+        if dimension == "exit_quality":
+            return [t.exit_quality or "(unset)"]
+        if dimension == "htf_alignment":
+            return [t.htf_alignment or "(unset)"]
+        if dimension == "with_htf":
+            if not t.htf_alignment or t.htf_alignment == "range":
+                return [t.htf_alignment or "(unset)"]
+            aligned = (t.htf_alignment == "bullish") == (t.direction == "long")
+            return ["with HTF" if aligned else "against HTF"]
+        if dimension == "atr_used":
+            if t.dtr is None or not t.atr:
+                return ["(unknown)"]
+            pct = float(t.dtr) / float(t.atr) * 100
+            for edge in (25, 50, 75, 100):
+                if pct < edge:
+                    return [f"< {edge}% ATR"]
+            return ["> 100% ATR"]
         if dimension == "day_type":
             return [journal_field(t, "actual_day_type") or "(unset)"]
         if dimension == "opening_type":
@@ -169,6 +191,8 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
 
     groups: dict[str, list[Trade]] = defaultdict(list)
     for t in trades:
+        if t.status == "missed":
+            continue
         for k in keys_for(t):
             groups[k].append(t)
 

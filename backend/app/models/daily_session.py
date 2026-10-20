@@ -64,3 +64,12 @@ class DailySession(Base, TimestampMixin, DemoMixin):
     what_to_change: Mapped[str] = mapped_column(Text, nullable=False, default="")
     mood: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1-5
     sleep: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1-5
+
+    # Plan -> Execute -> Review workflow additions.
+    htf_bias: Mapped[str | None] = mapped_column(String, nullable=True)  # bullish/bearish/range
+    market_context: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    # Pre-market readiness checklist: [{"label": ..., "done": bool}]
+    readiness: Mapped[list] = mapped_column(JSON, nullable=False, default=list, server_default="[]")
+    day_grade: Mapped[str | None] = mapped_column(String, nullable=True)  # A+/A/B/C
+    key_lesson: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    focus_tomorrow: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")

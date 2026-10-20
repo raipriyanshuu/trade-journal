@@ -7,7 +7,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 
-TAG_CATEGORIES = ("setup", "mistake", "emotion", "custom")
+# "setup" is shown as "Trade type" in the UI (Pullback, Retest, Reversal, ...).
+# "location" = entry location, "probability" = pre-trade probability bucket,
+# "thesis" = what exactly happened (Continuation, Stopped, ...).
+TAG_CATEGORIES = ("setup", "mistake", "location", "probability", "thesis", "emotion", "custom")
 
 trade_tags = Table(
     "trade_tags",

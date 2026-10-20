@@ -20,12 +20,25 @@ def breakeven_threshold(db: Session, currency: str) -> Decimal:
 
 
 def trade_result(net_pnl: Decimal, status: str, threshold: Decimal) -> str:
-    """win | loss | breakeven | open."""
+    """win | loss | breakeven | open | missed (from P&L)."""
+    if status == "missed":
+        return "missed"
     if status != "closed":
         return "open"
     if abs(Decimal(net_pnl)) <= threshold:
         return "breakeven"
     return "win" if Decimal(net_pnl) > 0 else "loss"
+
+
+def result_for(trade: Trade, threshold: Decimal) -> str:
+    """Result for a trade, honouring the outcome label when P&L is unknown."""
+    if trade.status == "closed" and not trade.pnl_known:
+        return trade.outcome if trade.outcome in ("win", "loss", "breakeven") else "breakeven"
+    return trade_result(trade.net_pnl, trade.status, threshold)
+
+
+def _tags_in(trade: Trade, category: str) -> list[str]:
+    return [t.name for t in trade.tags if t.category == category]
 
 
 def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = None) -> dict:
@@ -58,8 +71,22 @@ def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = Non
         "pnl_only": trade.pnl_only,
         "time_known": trade.time_known,
         "is_demo": trade.is_demo,
-        "result": trade_result(trade.net_pnl, trade.status, threshold),
+        "result": result_for(trade, threshold),
         "tags": [{"id": t.id, "name": t.name, "category": t.category} for t in trade.tags],
+        # Notion-style journal fields.
+        "dtr": trade.dtr,
+        "atr": trade.atr,
+        "entry_quality": trade.entry_quality,
+        "exit_quality": trade.exit_quality,
+        "htf_alignment": trade.htf_alignment,
+        "partial_profit": trade.partial_profit,
+        "outcome": trade.outcome,
+        "pnl_known": trade.pnl_known,
+        "context": trade.context,
+        "behaviour": trade.behaviour,
+        "initial_stop": trade.initial_stop,
+        "planned_target": trade.planned_target,
+        "first_entry_price": trade.first_entry_price,
     }
 
 

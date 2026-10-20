@@ -16,7 +16,7 @@ def test_seed_counts(db):
 def test_seed_is_idempotent(db):
     seed_all(db)
     second = seed_all(db)
-    assert second == {"instruments": 0, "settings": 0, "mistake_tags": 0}
+    assert second == {"instruments": 0, "settings": 0, "mistake_tags": 0, "taxonomy": 0}
     assert db.query(Instrument).count() == 16
 
 
@@ -53,4 +53,18 @@ def test_mistake_tags_seeded(db):
     names = {t.name for t in db.query(Tag).filter(Tag.category == "mistake").all()}
     assert "revenge" in names
     assert "moved stop" in names
-    assert len(names) == 13
+    # 13 spec mistakes + 4 from the Notion journal (Chased Entry, FOMO and Early
+    # Exit already exist, matched case-insensitively, so they are not duplicated).
+    assert len(names) == 17
+    assert "Not enough Mindful" in names
+
+
+def test_taxonomy_seeded(db):
+    seed_all(db)
+    by_cat = {}
+    for t in db.query(Tag).all():
+        by_cat.setdefault(t.category, set()).add(t.name)
+    assert "Pullback" in by_cat["setup"]
+    assert "Demand/Supply Zones" in by_cat["location"]
+    assert "65-75" in by_cat["probability"]
+    assert "Continuation (Thesis Held)" in by_cat["thesis"]

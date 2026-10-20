@@ -3,10 +3,12 @@ import { api } from "../lib/api";
 import { useConfig } from "../lib/config";
 import { formatDateTime } from "../lib/format";
 import ImportWizard from "../components/import/ImportWizard";
+import BarImport from "../components/import/BarImport";
 
 const TABS = [
-  { key: "import", label: "Import" },
+  { key: "import", label: "Import trades" },
   { key: "history", label: "Import history" },
+  { key: "bars", label: "Bar data" },
   { key: "export", label: "Export & backup" },
 ] as const;
 
@@ -30,6 +32,7 @@ export default function Data() {
 
       {tab === "import" && <ImportWizard onImported={() => setRefreshKey((k) => k + 1)} />}
       {tab === "history" && <History key={refreshKey} />}
+      {tab === "bars" && <BarImport />}
       {tab === "export" && <ExportTab />}
     </div>
   );

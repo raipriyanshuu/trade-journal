@@ -12,6 +12,10 @@ import {
   localInputToUtcIso,
 } from "../lib/format";
 import Modal from "../components/Modal";
+import ReplayChart from "../components/trades/ReplayChart";
+import {
+  CATEGORY_LABELS, ChipPicker, GradeBadge, GradePicker, HtfBadge, HtfPicker, JOURNAL_CATEGORIES, ResultBadge, TagChips,
+} from "../components/journal/Pickers";
 
 export default function TradeDetail() {
   const { id } = useParams();
@@ -102,11 +106,20 @@ export default function TradeDetail() {
           </p>
         </div>
         <div className="text-right">
-          <div className={`text-2xl font-mono font-semibold ${pnlColor(trade.net_pnl)}`}>
-            {formatMoney(trade.net_pnl, trade.currency)}
-          </div>
-          <div className="text-sm text-ink-muted">
-            {trade.r_multiple ? `${trade.r_multiple}R` : "no R"} &middot; {trade.result}
+          {trade.status === "missed" ? (
+            <div className="text-2xl font-mono font-semibold text-violet-300">
+              {trade.r_multiple ? `~${trade.r_multiple}R left` : "missed"}
+            </div>
+          ) : trade.pnl_known ? (
+            <div className={`text-2xl font-mono font-semibold ${pnlColor(trade.net_pnl)}`}>
+              {formatMoney(trade.net_pnl, trade.currency)}
+            </div>
+          ) : (
+            <div className="text-sm text-ink-faint">P&amp;L not recorded (label only)</div>
+          )}
+          <div className="text-sm text-ink-muted mt-1 flex items-center gap-2 justify-end">
+            {trade.status !== "missed" && <span>{trade.r_multiple ? `${trade.r_multiple}R` : "no R"}</span>}
+            <ResultBadge result={trade.result} partial={trade.partial_profit} />
           </div>
         </div>
       </div>
@@ -130,6 +143,10 @@ export default function TradeDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left: executions */}
         <div className="lg:col-span-2 space-y-4">
+          <Section title="Replay">
+            <ReplayChart tradeId={trade.id} />
+          </Section>
+
           <Section title="Executions">
             <table className="w-full text-sm">
               <thead>
@@ -186,23 +203,36 @@ export default function TradeDetail() {
 
         {/* Right: context + notes */}
         <div className="space-y-4">
-          <Section title="Context" action={
+          <Section title="Journal" action={
             <button className="btn-ghost text-xs" onClick={() => setEditDetails(true)}>Edit</button>
           }>
             <dl className="text-sm space-y-1.5">
+              <div className="flex justify-between items-center"><dt className="text-ink-faint">HTF</dt><dd><HtfBadge value={trade.htf_alignment} /></dd></div>
+              <div className="flex justify-between items-center"><dt className="text-ink-faint">Entry / exit</dt><dd className="flex gap-1"><GradeBadge grade={trade.entry_quality} /><GradeBadge grade={trade.exit_quality} /></dd></div>
+              <Row k="DTR / ATR" v={trade.dtr && trade.atr ? `${Number(trade.dtr)} / ${Number(trade.atr)} (${Math.round((Number(trade.dtr) / Number(trade.atr)) * 100)}%)` : "—"} />
               <Row k="Scenario" v={trade.scenario} />
               <Row k="Planned" v={trade.planned === null ? "—" : trade.planned ? "yes" : "no"} />
-              <Row k="Checklist" v={trade.checklist_score === null ? "—" : `${trade.checklist_score}/4`} />
-              <Row k="VWAP" v={trade.vwap_relation} />
-              <Row k="Entry loc" v={trade.entry_location.replace("_", " ")} />
             </dl>
-            {trade.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-3">
-                {trade.tags.map((t) => (
-                  <span key={t.id} className={`badge ${t.category === "mistake" ? "bg-neg/15 text-neg" : "bg-accent/15 text-accent-soft"}`}>
-                    {t.name}
-                  </span>
-                ))}
+            <div className="space-y-2 mt-3">
+              {JOURNAL_CATEGORIES.map((c) => (
+                trade.tags.some((t) => t.category === c) && (
+                  <div key={c}>
+                    <div className="text-[11px] text-ink-faint mb-0.5">{CATEGORY_LABELS[c]}</div>
+                    <TagChips tags={trade.tags} category={c} max={8} />
+                  </div>
+                )
+              ))}
+            </div>
+            {trade.context && (
+              <div className="mt-3">
+                <div className="text-[11px] text-ink-faint">Context</div>
+                <p className="text-sm text-ink-muted whitespace-pre-wrap">{trade.context}</p>
+              </div>
+            )}
+            {trade.behaviour && (
+              <div className="mt-2">
+                <div className="text-[11px] text-ink-faint">Behaviour</div>
+                <p className="text-sm text-ink-muted whitespace-pre-wrap">{trade.behaviour}</p>
               </div>
             )}
           </Section>
@@ -310,12 +340,29 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
   const [pnlOnly, setPnlOnly] = useState(trade.pnl_only);
   const [notes, setNotes] = useState(trade.notes);
   const [tagIds, setTagIds] = useState<number[]>(trade.tags.map((t) => t.id));
+  const [dtr, setDtr] = useState(trade.dtr ?? "");
+  const [atr, setAtr] = useState(trade.atr ?? "");
+  const [entryQ, setEntryQ] = useState<string | null>(trade.entry_quality);
+  const [exitQ, setExitQ] = useState<string | null>(trade.exit_quality);
+  const [htf, setHtf] = useState<string | null>(trade.htf_alignment);
+  const [context, setContext] = useState(trade.context);
+  const [behaviour, setBehaviour] = useState(trade.behaviour);
+  const [partial, setPartial] = useState(trade.partial_profit);
   const [saving, setSaving] = useState(false);
+  const toggleTag = (id: number) => setTagIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   async function save() {
     setSaving(true);
     try {
       await api.updateTrade(trade.id, {
+        dtr: dtr || null,
+        atr: atr || null,
+        entry_quality: entryQ,
+        exit_quality: exitQ,
+        htf_alignment: htf,
+        context,
+        behaviour,
+        partial_profit: partial,
         initial_stop: stop || null,
         planned_target: target || null,
         planned_risk_amount: risk || null,
@@ -336,12 +383,31 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
   }
 
   return (
-    <Modal title="Edit trade" open onClose={onClose} footer={
+    <Modal wide title="Edit trade" open onClose={onClose} footer={
       <>
         <button className="btn-ghost" onClick={onClose}>Cancel</button>
         <button className="btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
       </>
     }>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <HtfPicker value={htf} onChange={setHtf} />
+        <GradePicker label="Entry quality" value={entryQ} onChange={setEntryQ} />
+        <GradePicker label="Exit quality" value={exitQ} onChange={setExitQ} />
+        <div><label className="label">DTR</label><input className="input font-mono" value={dtr} onChange={(e) => setDtr(e.target.value)} /></div>
+        <div><label className="label">ATR</label><input className="input font-mono" value={atr} onChange={(e) => setAtr(e.target.value)} /></div>
+        <label className="flex items-center gap-2 text-sm pt-5">
+          <input type="checkbox" checked={partial} onChange={(e) => setPartial(e.target.checked)} /> Took partial profit
+        </label>
+      </div>
+      <div className="space-y-3 mb-4">
+        {JOURNAL_CATEGORIES.map((c) => <ChipPicker key={c} tags={tags} category={c} selected={tagIds} onToggle={toggleTag} />)}
+        <ChipPicker tags={tags} category="emotion" selected={tagIds} onToggle={toggleTag} />
+        <ChipPicker tags={tags} category="custom" selected={tagIds} onToggle={toggleTag} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><label className="label">Context</label><textarea className="input min-h-[60px]" value={context} onChange={(e) => setContext(e.target.value)} /></div>
+          <div><label className="label">Behaviour</label><textarea className="input min-h-[60px]" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} /></div>
+        </div>
+      </div>
       <div className="grid grid-cols-3 gap-3">
         <div><label className="label">Initial stop</label><input className="input font-mono" value={stop} onChange={(e) => setStop(e.target.value)} /></div>
         <div><label className="label">Target</label><input className="input font-mono" value={target} onChange={(e) => setTarget(e.target.value)} /></div>
@@ -381,23 +447,6 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
         <input type="checkbox" checked={pnlOnly} onChange={(e) => setPnlOnly(e.target.checked)} />
         P&amp;L-only trade (exclude from point &amp; R stats)
       </label>
-      {tags.length > 0 && (
-        <div className="mt-3">
-          <label className="label">Tags</label>
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((t) => {
-              const on = tagIds.includes(t.id);
-              return (
-                <button key={t.id}
-                  onClick={() => setTagIds((ids) => on ? ids.filter((x) => x !== t.id) : [...ids, t.id])}
-                  className={`badge ${on ? (t.category === "mistake" ? "bg-neg/20 text-neg" : "bg-accent/20 text-accent-soft") : "bg-card-hover text-ink-muted"}`}>
-                  {t.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
       <div className="mt-3">
         <label className="label">Notes</label>
         <textarea className="input min-h-[70px]" value={notes} onChange={(e) => setNotes(e.target.value)} />

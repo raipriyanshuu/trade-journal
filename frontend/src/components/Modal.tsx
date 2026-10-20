@@ -6,9 +6,10 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  wide?: boolean;
 }
 
-export default function Modal({ title, open, onClose, children, footer }: Props) {
+export default function Modal({ title, open, onClose, children, footer, wide }: Props) {
   if (!open) return null;
   return (
     <div
@@ -16,7 +17,7 @@ export default function Modal({ title, open, onClose, children, footer }: Props)
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-lg max-h-[85vh] flex flex-col"
+        className={`card w-full ${wide ? "max-w-4xl" : "max-w-lg"} max-h-[90vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-3 border-b border-card-border">

@@ -23,7 +23,47 @@ const ROUNDTRIP_FIELDS: [string, string][] = [
   ["fees", "Fees"],
   ["pnl", "P&L"],
   ["external_id", "External ID"],
+  ["outcome", "Result (Win/Loss/Missed)"],
+  ["dtr_atr", "DTR/ATR (46/77)"],
+  ["entry_quality", "Entry quality"],
+  ["exit_quality", "Exit quality"],
+  ["htf_alignment", "HTF alignment"],
+  ["context", "Context"],
+  ["behaviour", "Behaviour"],
+  ["notes", "Notes"],
 ];
+
+const TAG_CATEGORY_OPTIONS: [string, string][] = [
+  ["setup", "Trade type"], ["location", "Entry location"], ["probability", "Probability"],
+  ["thesis", "What happened"], ["mistake", "Mistakes"], ["emotion", "Emotion"], ["custom", "Custom"],
+];
+
+// Best-effort guess of a tag category from a Notion column name.
+function guessCategory(header: string): string | null {
+  const h = header.toLowerCase();
+  if (/mistake/.test(h)) return "mistake";
+  if (/trade ?type|setup/.test(h)) return "setup";
+  if (/location/.test(h)) return "location";
+  if (/prob/.test(h)) return "probability";
+  if (/what.*happen|thesis/.test(h)) return "thesis";
+  if (/emotion|feeling/.test(h)) return "emotion";
+  return null;
+}
+
+// Header patterns for a Notion trading-journal export.
+const NOTION_HINTS: Record<string, RegExp> = {
+  symbol: /^(instrument|symbol|ticker)$/i,
+  quantity: /^(lot ?size|lots?|qty|quantity|size)$/i,
+  entry_time: /^(time|date|entry ?time)$/i,
+  direction: /^(direction|side|long\/short)$/i,
+  outcome: /^(trade|result|outcome)$/i,
+  dtr_atr: /^dtr ?\/ ?atr$/i,
+  entry_quality: /^entry ?quality$/i,
+  exit_quality: /^exit ?quality$/i,
+  htf_alignment: /^htf/i,
+  context: /^context$/i,
+  behaviour: /^behaviou?r$/i,
+};
 
 const TZ = ["America/New_York", "Asia/Kolkata", "America/Chicago", "Europe/London", "UTC"];
 
@@ -39,7 +79,9 @@ export default function ImportWizard({ onImported }: { onImported: () => void })
   const [dtFormat, setDtFormat] = useState("auto");
   const [fileTz, setFileTz] = useState("America/New_York");
   const [qtyUnit, setQtyUnit] = useState("instrument");
-  const [tagColumns, setTagColumns] = useState<string[]>([]);
+  // header -> tag category ("" = not a tag column)
+  const [tagCols, setTagCols] = useState<Record<string, string>>({});
+  const tagColumns = Object.entries(tagCols).filter(([, c]) => c).map(([column, category]) => ({ column, category }));
   const [symbolMapText, setSymbolMapText] = useState("");
   const [profileName, setProfileName] = useState("");
   const [profiles, setProfiles] = useState<{ id: number; name: string; format: string; config: Record<string, unknown> }[]>([]);
@@ -59,14 +101,24 @@ export default function ImportWizard({ onImported }: { onImported: () => void })
       const prev = await api.previewImport(f);
       setHeaders(prev.headers);
       setRows(prev.rows);
-      // Best-effort auto-map on matching header names.
+      // Best-effort auto-map on matching header names (with Notion hints).
       const auto: Record<string, string> = {};
-      const fields = format === "fills" ? FILL_FIELDS : ROUNDTRIP_FIELDS;
+      const fmt = source === "notion" ? "roundtrip" : format;
+      if (source === "notion") setFormat("roundtrip");
+      const fields = fmt === "fills" ? FILL_FIELDS : ROUNDTRIP_FIELDS;
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
       for (const [field] of fields) {
-        const hit = prev.headers.find((h) => h.toLowerCase().replace(/[^a-z]/g, "").includes(field.replace(/_/g, "")));
+        const hint = NOTION_HINTS[field];
+        const hit = prev.headers.find((h) => (hint && hint.test(h.trim())) || norm(h).includes(field.replace(/_/g, "")));
         if (hit) auto[field] = hit;
       }
       setMap(auto);
+      const cats: Record<string, string> = {};
+      for (const h of prev.headers) {
+        const c = guessCategory(h);
+        if (c && !Object.values(auto).includes(h)) cats[h] = c;
+      }
+      setTagCols(cats);
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -127,7 +179,8 @@ export default function ImportWizard({ onImported }: { onImported: () => void })
     setDtFormat((c.datetime_format as string) ?? "auto");
     setFileTz((c.file_timezone as string) ?? "UTC");
     setQtyUnit((c.quantity_unit as string) ?? "instrument");
-    setTagColumns((c.tag_columns as string[]) ?? []);
+    const saved = (c.tag_columns as (string | { column: string; category: string })[]) ?? [];
+    setTagCols(Object.fromEntries(saved.map((s) => (typeof s === "string" ? [s, "custom"] : [s.column, s.category]))));
     setSource(((c.source as string) as "import" | "notion") ?? "import");
   }
 
@@ -214,15 +267,22 @@ export default function ImportWizard({ onImported }: { onImported: () => void })
                 <label className="label">Date/time format (or "auto")</label>
                 <input className="input font-mono" value={dtFormat} onChange={(e) => setDtFormat(e.target.value)} placeholder="%Y-%m-%d %H:%M:%S" />
               </div>
-              {source === "notion" && (
-                <div>
-                  <label className="label">Tag columns (multi-select)</label>
-                  <select multiple className="input h-[72px]" value={tagColumns}
-                    onChange={(e) => setTagColumns(Array.from(e.target.selectedOptions).map((o) => o.value))}>
-                    {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
-              )}
+            </div>
+
+            <div>
+              <label className="label">Multi-select columns &rarr; tags</label>
+              <p className="text-xs text-ink-faint mb-2">Pick a category for each column whose cells hold comma-separated values (Notion multi-selects). Values match existing tags ignoring case and spacing; new values become new tags.</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {headers.filter((h) => !Object.values(map).includes(h) || tagCols[h]).map((h) => (
+                  <div key={h} className="flex items-center gap-2">
+                    <span className="text-xs text-ink-muted w-32 truncate" title={h}>{h}</span>
+                    <select className="input !py-1" value={tagCols[h] ?? ""} onChange={(e) => setTagCols((m) => ({ ...m, [h]: e.target.value }))}>
+                      <option value="">not tags</option>
+                      {TAG_CATEGORY_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div>

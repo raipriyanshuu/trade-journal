@@ -43,6 +43,15 @@ _META_FIELDS = (
     "checklist_score",
     "vwap_relation",
     "entry_location",
+    "dtr",
+    "atr",
+    "entry_quality",
+    "exit_quality",
+    "htf_alignment",
+    "context",
+    "behaviour",
+    "partial_profit",
+    "outcome",
 )
 
 
@@ -259,6 +268,7 @@ def rebuild_for(
                 Trade.account_id == account_id,
                 Trade.instrument_id == instrument_id,
                 Trade.pnl_only.is_(False),
+                Trade.status != "missed",
             )
         ).all()
     )
@@ -355,8 +365,8 @@ def rebuild_for(
 def recompute_trade_r(db: Session, trade: Trade) -> None:
     """Recompute R for a single trade after its stop/risk/pnl_only changed."""
     instrument = db.get(Instrument, trade.instrument_id)
-    if instrument is None:
-        return
+    if instrument is None or trade.status == "missed":
+        return  # missed trades keep their "potential R"
     trade.r_multiple = compute_r(
         net_pnl=trade.net_pnl,
         status=trade.status,

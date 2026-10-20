@@ -34,6 +34,12 @@ class DailySessionBase(BaseModel):
     what_to_change: str = ""
     mood: int | None = None
     sleep: int | None = None
+    htf_bias: str | None = None
+    market_context: str = ""
+    readiness: list = []
+    day_grade: str | None = None
+    key_lesson: str = ""
+    focus_tomorrow: str = ""
 
 
 class DailySessionUpsert(DailySessionBase):

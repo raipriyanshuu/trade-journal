@@ -5,13 +5,17 @@ import { useReference } from "../lib/useReference";
 import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
+import { GradeBadge, HtfBadge, ResultBadge, TagChips } from "../components/journal/Pickers";
 
-const RESULT_BADGE: Record<string, string> = {
-  win: "bg-pos/15 text-pos",
-  loss: "bg-neg/15 text-neg",
-  breakeven: "bg-card-border text-ink-muted",
-  open: "bg-accent/15 text-accent-soft",
-};
+type View = "journal" | "numbers";
+
+function loadView(): View {
+  try {
+    return localStorage.getItem("tradelog.view") === "numbers" ? "numbers" : "journal";
+  } catch {
+    return "journal";
+  }
+}
 
 export default function TradeLog() {
   const nav = useNavigate();
@@ -20,8 +24,14 @@ export default function TradeLog() {
   const [filters, setFilters] = useState<TradeFilters>({ sort_by: "open_time", order: "desc" });
   const [trades, setTrades] = useState<TradeSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState<"taken" | "missed" | null>(null);
+  const [view, setViewState] = useState<View>(loadView);
   const [err, setErr] = useState<string | null>(null);
+
+  function setView(v: View) {
+    setViewState(v);
+    try { localStorage.setItem("tradelog.view", v); } catch { /* storage unavailable */ }
+  }
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkTagId, setBulkTagId] = useState<number | "">("");
 
@@ -54,7 +64,7 @@ export default function TradeLog() {
 
   const totalsByCcy = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const t of trades) m[t.currency] = (m[t.currency] ?? 0) + Number(t.net_pnl);
+    for (const t of trades) if (t.status === "closed" && t.pnl_known) m[t.currency] = (m[t.currency] ?? 0) + Number(t.net_pnl);
     return m;
   }, [trades]);
 
@@ -66,9 +76,18 @@ export default function TradeLog() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Trade Log</h1>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          + New trade
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex p-1 bg-bg-soft rounded-lg">
+            {(["journal", "numbers"] as View[]).map((v) => (
+              <button key={v} onClick={() => setView(v)}
+                className={`px-3 py-1 rounded-md text-xs font-medium ${view === v ? "bg-card text-ink" : "text-ink-muted"}`}>
+                {v === "journal" ? "Journal view" : "Numbers view"}
+              </button>
+            ))}
+          </div>
+          <button className="btn-ghost" onClick={() => setShowForm("missed")}>+ Missed setup</button>
+          <button className="btn-primary" onClick={() => setShowForm("taken")}>+ New trade</button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -96,6 +115,7 @@ export default function TradeLog() {
           <option value="loss">Loss</option>
           <option value="breakeven">Breakeven</option>
           <option value="open">Open</option>
+          <option value="missed">Missed</option>
         </FilterSelect>
         <FilterSelect label="Source" value={filters.source ?? ""} onChange={(v) => set("source", v)}>
           <option value="">All</option>
@@ -143,6 +163,50 @@ export default function TradeLog() {
       ) : trades.length === 0 ? (
         <div className="card p-10 text-center text-ink-muted">
           No trades match. Click <span className="text-ink">+ New trade</span> to add one.
+        </div>
+      ) : view === "journal" ? (
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
+                <th className="px-3 py-2 w-8"></th>
+                {["Date", "Instrument", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type",
+                  "Mistakes", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
+                  <th key={h} className="px-3 py-2 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {trades.map((t) => (
+                <tr key={t.id} className="border-b border-card-border/50 hover:bg-card-hover cursor-pointer align-top" onClick={() => nav(`/trades/${t.id}`)}>
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSel(t.id)} />
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-ink-muted">{t.trading_date}</td>
+                  <td className="px-3 py-2 font-mono font-semibold whitespace-nowrap">
+                    {t.symbol}
+                    {t.is_demo && <span className="badge bg-accent/15 text-accent-soft ml-1">demo</span>}
+                  </td>
+                  <td className="px-3 py-2 font-mono">{t.max_position_size}</td>
+                  <td className="px-3 py-2 text-ink-muted whitespace-nowrap">{t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}</td>
+                  <td className="px-3 py-2 font-mono text-ink-muted">{t.dtr && t.atr ? `${Number(t.dtr)}/${Number(t.atr)}` : "—"}</td>
+                  <td className="px-3 py-2"><span className={`badge ${t.direction === "long" ? "bg-pos/15 text-pos" : "bg-neg/15 text-neg"}`}>{t.direction === "long" ? "Long" : "Short"}</span></td>
+                  <td className="px-3 py-2"><TagChips tags={t.tags} category="probability" /></td>
+                  <td className="px-3 py-2"><TagChips tags={t.tags} category="thesis" /></td>
+                  <td className="px-3 py-2"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
+                  <td className="px-3 py-2"><TagChips tags={t.tags} category="setup" /></td>
+                  <td className="px-3 py-2"><TagChips tags={t.tags} category="mistake" /></td>
+                  <td className="px-3 py-2"><GradeBadge grade={t.entry_quality} /></td>
+                  <td className="px-3 py-2"><GradeBadge grade={t.exit_quality} /></td>
+                  <td className="px-3 py-2"><TagChips tags={t.tags} category="location" /></td>
+                  <td className="px-3 py-2"><HtfBadge value={t.htf_alignment} /></td>
+                  <td className={`px-3 py-2 text-right font-mono whitespace-nowrap ${t.status === "missed" || !t.pnl_known ? "text-ink-faint" : pnlColor(t.net_pnl)}`}>
+                    {t.status === "missed" ? (t.r_multiple ? `~${t.r_multiple}R` : "—") : t.pnl_known ? formatMoney(t.net_pnl, t.currency) : "label"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="card overflow-x-auto">
@@ -196,7 +260,7 @@ export default function TradeLog() {
                     {t.r_multiple ? `${t.r_multiple}R` : "—"}
                   </td>
                   <td className="px-3 py-2">
-                    <span className={`badge ${RESULT_BADGE[t.result] ?? ""}`}>{t.result}</span>
+                    <ResultBadge result={t.result} partial={t.partial_profit} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
@@ -219,9 +283,10 @@ export default function TradeLog() {
 
       {showForm && (
         <ManualTradeForm
-          onClose={() => setShowForm(false)}
+          initialMode={showForm}
+          onClose={() => setShowForm(null)}
           onCreated={(id) => {
-            setShowForm(false);
+            setShowForm(null);
             nav(`/trades/${id}`);
           }}
         />

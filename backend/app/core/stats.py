@@ -20,25 +20,47 @@ def _f(v) -> float:
     return float(v) if v is not None else 0.0
 
 
+def classify(t: Trade, be: Decimal = ZERO) -> str:
+    """win | loss | breakeven for a closed trade.
+
+    Label-only trades (imported with a Win/Loss tag but no prices or P&L) use
+    their outcome label; everything else is classified from net P&L.
+    """
+    if not t.pnl_known:
+        return t.outcome if t.outcome in ("win", "loss") else "breakeven"
+    net = Decimal(t.net_pnl)
+    if net > be:
+        return "win"
+    if net < -be:
+        return "loss"
+    return "breakeven"
+
+
 def basic_stats(trades: list[Trade], be: Decimal = ZERO) -> dict:
     closed = [t for t in trades if t.status == "closed"]
-    wins = [t for t in closed if Decimal(t.net_pnl) > be]
-    losses = [t for t in closed if Decimal(t.net_pnl) < -be]
-    bes = [t for t in closed if -be <= Decimal(t.net_pnl) <= be]
+    wins = [t for t in closed if classify(t, be) == "win"]
+    losses = [t for t in closed if classify(t, be) == "loss"]
+    bes = [t for t in closed if classify(t, be) == "breakeven"]
 
-    gross_win = sum((Decimal(t.net_pnl) for t in wins), ZERO)
-    gross_loss = sum((Decimal(t.net_pnl) for t in losses), ZERO)
-    net = sum((Decimal(t.net_pnl) for t in closed), ZERO)
-    fees = sum((Decimal(t.fees) for t in closed), ZERO)
+    # Money statistics only use trades whose P&L is actually known.
+    money = [t for t in closed if t.pnl_known]
+    m_wins = [t for t in wins if t.pnl_known]
+    m_losses = [t for t in losses if t.pnl_known]
+
+    gross_win = sum((Decimal(t.net_pnl) for t in m_wins), ZERO)
+    gross_loss = sum((Decimal(t.net_pnl) for t in m_losses), ZERO)
+    net = sum((Decimal(t.net_pnl) for t in money), ZERO)
+    fees = sum((Decimal(t.fees) for t in money), ZERO)
 
     decided = len(wins) + len(losses)
     win_rate = (len(wins) / decided) if decided else 0.0
     profit_factor = (_f(gross_win) / abs(_f(gross_loss))) if gross_loss != 0 else (
         float("inf") if gross_win > 0 else 0.0
     )
-    avg_win = (_f(gross_win) / len(wins)) if wins else 0.0
-    avg_loss = (_f(gross_loss) / len(losses)) if losses else 0.0
-    expectancy = (_f(net) / len(closed)) if closed else 0.0
+    avg_win = (_f(gross_win) / len(m_wins)) if m_wins else 0.0
+    avg_loss = (_f(gross_loss) / len(m_losses)) if m_losses else 0.0
+    expectancy = (_f(net) / len(money)) if money else 0.0
+    wins_m, losses_m, closed_m = m_wins, m_losses, money
 
     r_vals = [_f(t.r_multiple) for t in closed if t.r_multiple is not None]
     expectancy_r = (sum(r_vals) / len(r_vals)) if r_vals else None
@@ -56,17 +78,18 @@ def basic_stats(trades: list[Trade], be: Decimal = ZERO) -> dict:
         "expectancy": round(expectancy, 2),
         "expectancy_r": round(expectancy_r, 3) if expectancy_r is not None else None,
         "net_pnl": str(net),
-        "gross_pnl": str(sum((Decimal(t.gross_pnl) for t in closed), ZERO)),
+        "gross_pnl": str(sum((Decimal(t.gross_pnl) for t in closed_m), ZERO)),
         "fees": str(fees),
-        "largest_win": str(max((Decimal(t.net_pnl) for t in wins), default=ZERO)),
-        "largest_loss": str(min((Decimal(t.net_pnl) for t in losses), default=ZERO)),
+        "largest_win": str(max((Decimal(t.net_pnl) for t in wins_m), default=ZERO)),
+        "largest_loss": str(min((Decimal(t.net_pnl) for t in losses_m), default=ZERO)),
+        "label_only": len(closed) - len(closed_m),
     }
 
 
 def equity_and_drawdown(trades: list[Trade]) -> dict:
     """Cumulative net P&L curve ordered by close/open time, plus drawdown."""
     closed = sorted(
-        [t for t in trades if t.status == "closed"],
+        [t for t in trades if t.status == "closed" and t.pnl_known],
         key=lambda t: (t.close_time or t.open_time, t.id),
     )
     points = []
@@ -95,11 +118,11 @@ def streaks(trades: list[Trade], be: Decimal = ZERO) -> dict:
     )
     cur_win = cur_loss = best_win = best_loss = 0
     for t in closed:
-        net = Decimal(t.net_pnl)
-        if net > be:
+        result = classify(t, be)
+        if result == "win":
             cur_win += 1
             cur_loss = 0
-        elif net < -be:
+        elif result == "loss":
             cur_loss += 1
             cur_win = 0
         else:

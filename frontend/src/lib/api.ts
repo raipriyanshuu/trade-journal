@@ -102,13 +102,73 @@ export interface TradeSummary {
   is_demo: boolean;
   result: string;
   tags: Tag[];
+  // Notion-style journal fields
+  dtr: string | null;
+  atr: string | null;
+  entry_quality: string | null;
+  exit_quality: string | null;
+  htf_alignment: string | null;
+  partial_profit: boolean;
+  outcome: string | null;
+  pnl_known: boolean;
+  context: string;
+  behaviour: string;
+  initial_stop: string | null;
+  planned_target: string | null;
+  first_entry_price: string | null;
+}
+
+export interface JournalFields {
+  dtr?: string | null;
+  atr?: string | null;
+  entry_quality?: string | null;
+  exit_quality?: string | null;
+  htf_alignment?: string | null;
+  context?: string;
+  behaviour?: string;
+  partial_profit?: boolean;
+}
+
+export interface MissedTradePayload extends JournalFields {
+  account_id: number;
+  instrument_id: number;
+  direction: string;
+  time: string;
+  quantity?: string;
+  planned_entry?: string | null;
+  initial_stop?: string | null;
+  planned_target?: string | null;
+  scenario?: string;
+  notes?: string;
+  tag_ids?: number[];
+}
+
+export interface Excursion {
+  trade_id: number;
+  timeframe: string;
+  bars: number;
+  mfe_points: number;
+  mae_points: number;
+  mfe_cash: number;
+  mae_cash: number;
+  mfe_r: number | null;
+  mae_r: number | null;
+  captured_pct: number | null;
+}
+
+export interface ReplayData {
+  trade_id: number;
+  symbol: string;
+  timeframe: string | null;
+  candles: { time: number; open: number; high: number; low: number; close: number }[];
+  markers: { time: number; position: string; color: string; shape: string; text: string }[];
+  lines: { price: number; title: string; color: string; style: number }[];
+  excursion: Excursion | null;
+  tz: string;
 }
 
 export interface TradeDetail extends TradeSummary {
-  initial_stop: string | null;
-  planned_target: string | null;
   planned_risk_amount: string | null;
-  first_entry_price: string | null;
   planned: boolean | null;
   checklist_score: number | null;
   vwap_relation: string;
@@ -124,7 +184,7 @@ export interface Leg {
   quantity: string;
 }
 
-export interface ManualTradePayload {
+export interface ManualTradePayload extends JournalFields {
   account_id: number;
   instrument_id: number;
   direction: string;
@@ -174,6 +234,12 @@ export interface DailySession {
   what_to_change: string;
   mood: number | null;
   sleep: number | null;
+  htf_bias: string | null;
+  market_context: string;
+  readiness: { label: string; done: boolean }[];
+  day_grade: string | null;
+  key_lesson: string;
+  focus_tomorrow: string;
 }
 
 export interface TradeFilters {
@@ -312,6 +378,44 @@ export const api = {
     return request<Array<{ key: string; trades: number; win_rate: number; net_pnl: string; avg_pnl: number; profit_factor: number | null; expectancy_r: number | null }>>(`/api/analytics/breakdown?${qs}`);
   },
   dimensions: () => request<string[]>("/api/analytics/dimensions"),
+
+  // Missed setups
+  createMissedTrade: (payload: MissedTradePayload) =>
+    request<TradeDetail>("/api/trades/missed", { method: "POST", body: JSON.stringify(payload) }),
+
+  // Phase 7: replay, MAE/MFE, bars, reports, AI review, charges
+  replay: (tradeId: number) => request<ReplayData>(`/api/trades/${tradeId}/replay`),
+  maeMfe: (filters: Record<string, string | number | boolean | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<any>(`/api/review/mae-mfe?${qs}`);
+  },
+  barCoverage: () =>
+    request<Array<{ instrument_id: number; symbol: string; timeframe: string; bars: number; first: string | null; last: string | null }>>("/api/bars/coverage"),
+  deleteBars: (instrumentId: number, timeframe: string) =>
+    request<{ deleted: number }>(`/api/bars?instrument_id=${instrumentId}&timeframe=${timeframe}`, { method: "DELETE" }),
+  importBars: async (file: File, config: Record<string, unknown>) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("config", JSON.stringify(config));
+    const res = await fetch("/api/bars/import", { method: "POST", body: fd });
+    if (!res.ok) {
+      let detail = "bar import failed";
+      try { detail = (await res.json()).detail ?? detail; } catch { /* */ }
+      throw new Error(detail);
+    }
+    return res.json() as Promise<{ rows_read: number; imported: number; skipped: number; failed: number; errors: string[] }>;
+  },
+  report: (params: Record<string, string | number | boolean | undefined>) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<any>(`/api/reports?${qs}`);
+  },
+  aiReview: (body: { period: string; anchor: string; account_id?: number; currency?: string; include_demo?: boolean }) =>
+    request<{ model: string; review: string; truncated: boolean; input_tokens: number; output_tokens: number }>(
+      "/api/reports/ai-review", { method: "POST", body: JSON.stringify(body) }),
+  estimateCharges: (body: { instrument_id: number; direction: string; entries: { price: string; quantity: string }[]; exits: { price: string; quantity: string }[] }) =>
+    request<Record<string, string | boolean>>("/api/charges/estimate", { method: "POST", body: JSON.stringify(body) }),
   getMistakeRules: () => request<{ rules: Record<string, any>; explanations: Record<string, string> }>("/api/mistakes/rules"),
   mistakeDrilldown: (type: string, filters: Record<string, string | number | undefined> = {}) => {
     const qs = new URLSearchParams({ type });
@@ -331,7 +435,7 @@ export const api = {
   getTrade: (id: number) => request<TradeDetail>(`/api/trades/${id}`),
   createManualTrade: (payload: ManualTradePayload) =>
     request<TradeDetail>("/api/trades/manual", { method: "POST", body: JSON.stringify(payload) }),
-  updateTrade: (id: number, patch: Partial<ManualTradePayload> & { pnl_only?: boolean }) =>
+  updateTrade: (id: number, patch: Partial<ManualTradePayload> & { pnl_only?: boolean; outcome?: string | null }) =>
     request<TradeDetail>(`/api/trades/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteTrade: (id: number) => request<void>(`/api/trades/${id}`, { method: "DELETE" }),
 

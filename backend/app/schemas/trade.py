@@ -30,7 +30,20 @@ class Leg(BaseModel):
     quantity: DecimalStr
 
 
-class ManualTradeCreate(BaseModel):
+class JournalFields(BaseModel):
+    """Notion-style fields shared by manual, missed and edited trades."""
+
+    dtr: DecimalStr | None = None
+    atr: DecimalStr | None = None
+    entry_quality: str | None = None
+    exit_quality: str | None = None
+    htf_alignment: str | None = None
+    context: str = ""
+    behaviour: str = ""
+    partial_profit: bool = False
+
+
+class ManualTradeCreate(JournalFields):
     account_id: int
     instrument_id: int
     direction: str  # long | short
@@ -53,7 +66,32 @@ class ManualTradeCreate(BaseModel):
     time_known: bool = True
 
 
+class MissedTradeCreate(JournalFields):
+    """A setup you saw but did not take. No executions; excluded from P&L stats."""
+
+    account_id: int
+    instrument_id: int
+    direction: str
+    time: datetime
+    quantity: DecimalStr = Decimal("1")
+    planned_entry: DecimalStr | None = None
+    initial_stop: DecimalStr | None = None
+    planned_target: DecimalStr | None = None
+    scenario: str = "none"
+    notes: str = ""
+    tag_ids: list[int] = []
+
+
 class TradeUpdate(BaseModel):
+    dtr: DecimalStr | None = None
+    atr: DecimalStr | None = None
+    entry_quality: str | None = None
+    exit_quality: str | None = None
+    htf_alignment: str | None = None
+    context: str | None = None
+    behaviour: str | None = None
+    partial_profit: bool | None = None
+    outcome: str | None = None
     initial_stop: DecimalStr | None = None
     planned_target: DecimalStr | None = None
     planned_risk_amount: DecimalStr | None = None
@@ -97,6 +135,19 @@ class TradeSummary(ORMModel):
     is_demo: bool
     result: str
     tags: list[TagRead] = []
+    dtr: DecimalStr | None = None
+    atr: DecimalStr | None = None
+    entry_quality: str | None = None
+    exit_quality: str | None = None
+    htf_alignment: str | None = None
+    partial_profit: bool = False
+    outcome: str | None = None
+    pnl_known: bool = True
+    context: str = ""
+    behaviour: str = ""
+    initial_stop: DecimalStr | None = None
+    planned_target: DecimalStr | None = None
+    first_entry_price: DecimalStr | None = None
 
 
 class TradeDetail(TradeSummary):

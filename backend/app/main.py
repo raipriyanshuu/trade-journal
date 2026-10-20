@@ -14,6 +14,7 @@ from app.api import analytics as analytics_api
 from app.api import export as export_api
 from app.api import mistakes as mistakes_api
 from app.api import importing as import_api
+from app.api import review as review_api
 from app.api import settings as settings_api
 from app.config import settings
 from app.db import SessionLocal
@@ -57,6 +58,7 @@ app.include_router(executions.router)
 app.include_router(attachments.router)
 app.include_router(import_api.router)
 app.include_router(export_api.router)
+app.include_router(review_api.router)
 
 # Serve uploaded screenshots.
 settings.ensure_dirs()

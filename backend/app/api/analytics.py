@@ -15,8 +15,10 @@ from app.models import Setting
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 DIMENSIONS = [
+    "setup_tag", "location", "probability", "thesis", "entry_quality", "exit_quality",
+    "htf_alignment", "with_htf", "atr_used", "mistake_tag",
     "instrument", "account", "direction", "session_time", "clock_time", "weekday",
-    "setup_tag", "scenario", "planned", "checklist_score", "vwap", "entry_location",
+    "scenario", "planned", "checklist_score", "vwap", "entry_location",
     "day_type", "opening_type", "holding_bucket", "position_size",
 ]
 

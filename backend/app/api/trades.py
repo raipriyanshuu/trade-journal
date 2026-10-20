@@ -21,7 +21,13 @@ from app.core.trade_builder import rebuild_for
 from app.db import get_db
 from app.models import Account, Execution, Instrument, Trade
 from app.models.tag import trade_tags
-from app.schemas.trade import ManualTradeCreate, TradeDetail, TradeSummary, TradeUpdate
+from app.schemas.trade import (
+    ManualTradeCreate,
+    MissedTradeCreate,
+    TradeDetail,
+    TradeSummary,
+    TradeUpdate,
+)
 
 router = APIRouter(prefix="/api/trades", tags=["trades"])
 
@@ -188,12 +194,61 @@ def _apply_trade_meta(db: Session, trade: Trade, payload: ManualTradeCreate) -> 
     trade.entry_location = payload.entry_location
     trade.notes = payload.notes
     trade.self_rating = payload.self_rating
+    _apply_journal_fields(trade, payload)
     _set_tags(db, trade, payload.tag_ids)
     db.commit()
     # Recompute R now that stop/risk are set.
     from app.core.trade_builder import recompute_trade_r
 
     recompute_trade_r(db, trade)
+
+
+def _apply_journal_fields(trade: Trade, payload) -> None:
+    trade.dtr = Decimal(payload.dtr) if payload.dtr is not None else None
+    trade.atr = Decimal(payload.atr) if payload.atr is not None else None
+    trade.entry_quality = payload.entry_quality
+    trade.exit_quality = payload.exit_quality
+    trade.htf_alignment = payload.htf_alignment
+    trade.context = payload.context
+    trade.behaviour = payload.behaviour
+    trade.partial_profit = payload.partial_profit
+
+
+@router.post("/missed", response_model=TradeDetail, status_code=201)
+def create_missed(payload: MissedTradeCreate, db: Session = Depends(get_db)):
+    """Log a setup you saw but did not take (no executions, no P&L)."""
+    from app.core.sessions import trading_date_for
+
+    acc = db.get(Account, payload.account_id)
+    inst = db.get(Instrument, payload.instrument_id)
+    if acc is None or inst is None:
+        raise HTTPException(404, "Account or instrument not found")
+    if payload.direction not in ("long", "short"):
+        raise HTTPException(422, "direction must be 'long' or 'short'")
+    ts = _as_utc(payload.time)
+    trade = Trade(
+        account_id=acc.id, instrument_id=inst.id, direction=payload.direction,
+        open_time=ts, close_time=None, trading_date=trading_date_for(ts, inst),
+        max_position_size=Decimal(payload.quantity), currency=inst.currency,
+        first_entry_price=Decimal(payload.planned_entry) if payload.planned_entry is not None else None,
+        initial_stop=Decimal(payload.initial_stop) if payload.initial_stop is not None else None,
+        planned_target=Decimal(payload.planned_target) if payload.planned_target is not None else None,
+        status="missed", outcome="missed", source="manual", scenario=payload.scenario,
+        notes=payload.notes, gross_pnl=Decimal("0"), fees=Decimal("0"), net_pnl=Decimal("0"),
+    )
+    # Potential R the missed setup offered (target distance / stop distance).
+    if trade.first_entry_price is not None and trade.initial_stop is not None and trade.planned_target is not None:
+        risk = abs(trade.first_entry_price - trade.initial_stop)
+        if risk > 0:
+            from app.core.money import q_price
+
+            trade.r_multiple = q_price(abs(trade.planned_target - trade.first_entry_price) / risk)
+    _apply_journal_fields(trade, payload)
+    db.add(trade)
+    db.flush()
+    _set_tags(db, trade, payload.tag_ids)
+    db.commit()
+    return serialize_detail(db, _get_trade_or_404(db, trade.id))
 
 
 def _set_tags(db: Session, trade: Trade, tag_ids: list[int]) -> None:

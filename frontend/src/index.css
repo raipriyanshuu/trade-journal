@@ -16,6 +16,19 @@ body {
   @apply bg-bg text-ink font-sans antialiased;
 }
 
+/* Print / "Export PDF": light theme, no navigation, full width. */
+@media print {
+  @page { margin: 12mm; }
+  html, body, #root { height: auto; background: #fff !important; color: #111 !important; }
+  aside, .no-print { display: none !important; }
+  main { overflow: visible !important; }
+  .card { background: #fff !important; border-color: #ddd !important; break-inside: avoid; }
+  .text-ink, .text-ink-muted { color: #222 !important; }
+  .text-ink-faint { color: #666 !important; }
+  .text-pos { color: #0a7d4f !important; }
+  .text-neg { color: #b4233a !important; }
+}
+
 /* Thin, dark scrollbars to match the trading-tool feel. */
 ::-webkit-scrollbar {
   width: 10px;

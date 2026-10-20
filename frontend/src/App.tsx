@@ -10,6 +10,8 @@ import Calendar from "./pages/Calendar";
 import PropTracker from "./pages/PropTracker";
 import Data from "./pages/Data";
 import Settings from "./pages/Settings";
+import Reports from "./pages/Reports";
+import Excursions from "./pages/Excursions";
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="prop" element={<PropTracker />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="excursions" element={<Excursions />} />
         <Route path="data" element={<Data />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />

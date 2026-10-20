@@ -11,6 +11,7 @@ from app.models.mistake import MistakeFlag
 from app.models.attachment import Attachment
 from app.models.importing import ImportBatch, MappingProfile
 from app.models.setting import Setting
+from app.models.bar import Bar
 
 __all__ = [
     "Base",
@@ -26,4 +27,5 @@ __all__ = [
     "ImportBatch",
     "MappingProfile",
     "Setting",
+    "Bar",
 ]

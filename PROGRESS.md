@@ -197,6 +197,81 @@ edit rebuild, and result/direction filters.
 
 ---
 
-## Next: Phase 6 — Prop-firm tracker
+## Phase 7 — Advanced review ✅ (complete) + Notion-style daily workflow
+
+Phase 6 was skipped on request and is still to do (see below).
+
+### Plan → Execute → Review (the daily workflow)
+- **Trading Day** page (`/journal`, first item in the sidebar) is a 3-step workspace
+  per date + account, with completion ticks on each step:
+  - **Plan:** HTF bias (Bullish / Bearish / Range), HTF read, market context &
+    thesis, auction structure (prior value, overnight), up to 6 key levels,
+    scenarios A/B/C with a probability bucket, news events (feed NEWS_WINDOW),
+    a pre-market **readiness checklist**, and yesterday's **lesson + focus
+    carried forward**.
+  - **Execute:** your plan pinned on top, day stats, and a Notion-style table of
+    the day's trades and **missed setups**; log either without leaving the page.
+  - **Review:** plan vs reality (opening type, day type, scenario that played
+    out), an **auto scorecard** (P&L, trades vs missed, with-HTF count, average
+    entry grade, thesis-held count, mistake trades), day grade, followed plan,
+    what to repeat / change, key lesson, focus for tomorrow, mood & sleep.
+- **Notion fields on every trade:** lot size, time, DTR/ATR (+ % of ATR used),
+  direction, probability, *what exactly happened*, result (Win / Loss /
+  Breakeven / Partial profit / **Missed**), trade type, mistakes, entry and exit
+  quality (A+/A/B/C), entry location, context, behaviour, HTF alignment.
+  Taxonomies are seeded from your Notion journal and editable in Settings → Tags.
+- **Trade form** rebuilt as *The trade → Context (before) → Execution & review
+  (after)*, with a **Taken / Missed setup** toggle and live risk / planned-R.
+- **Trade Log** has a *Journal view* (Notion columns) and a *Numbers view*.
+- **Missed setups** are stored with planned entry/stop/target and their
+  potential R; they never touch P&L statistics and show up as "missed
+  opportunities" on the Mistakes page and in reports.
+- **Notion import:** the wizard now maps Result, DTR/ATR (`46/77`), entry/exit
+  quality, HTF, context and behaviour, and lets you assign each multi-select
+  column a tag category. Rows with only a Win/Loss label (no prices, no P&L)
+  import as **label-only** trades: they count toward win rate and streaks but
+  never toward money statistics.
+- New breakdowns: trade type, entry location, probability, what happened,
+  entry/exit quality, HTF alignment, **with vs against HTF**, **% of ATR used**,
+  mistake tag.
+
+### Phase 7 features
+- **Bar data import** (Import / Export → Bar data): 1m / 5m OHLCV CSV with
+  column auto-detect, file time zone, duplicate-safe re-imports, coverage table.
+- **MAE / MFE** page: per-trade excursions in points, cash and R; scatter plot;
+  % of winners that went beyond X R of heat (stop placement); average exit
+  efficiency; losers that were up 1R+ first.
+- **Trade replay** on every trade: candlestick chart (lightweight-charts) with
+  entry/exit markers, stop/target/entry/exit lines and that day's journal
+  levels, in IST, plus the MAE/MFE readout.
+- **Weekly / monthly reports**: KPIs vs previous period, daily P&L, best/worst
+  setups, top 3 costliest mistakes, clean streak, rule violations, missed
+  setups, planning/review discipline, your lessons, and a **rule-based
+  suggested focus** (with runners-up). **Export PDF** prints a light-themed page.
+- **Optional AI weekly review** (Settings → AI review, off by default): sends an
+  anonymized statistics summary to the Claude API (`claude-opus-5-5` by default,
+  with server-side refusal fallback) via the official `anthropic` SDK. The API
+  key is stored locally and never returned to the browser in full.
+- **Indian charges calculator** (Settings → India charges): brokerage, STT/CTT,
+  exchange, SEBI, stamp duty, GST for NSE and MCX; the *auto* button next to
+  Fees fills the total. Rates are seeded unverified.
+- Demo data now includes two planned + reviewed days, journal fields, a missed
+  setup and synthetic 1-minute bars (all flagged demo and fully removable).
+
+### Tests
+81 backend tests pass (new: bar import, MAE/MFE maths, replay payload, reports,
+charges, missed + label-only trades, Notion import mapping, AI-review guard,
+API-key masking, demo showcase).
+
+### Known limitations
+- MAE/MFE uses whole bars, so the entry bar can include a little price action
+  from just before the fill (slightly conservative).
+- Reports mix currencies when no currency is selected (the page says so).
+- The AI review needs your own Anthropic API key and is billed per use.
+
+---
+
+## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.
+The account fields already exist and feed the OVERSIZE / AFTER_DAILY_LIMIT rules.

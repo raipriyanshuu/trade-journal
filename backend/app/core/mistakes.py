@@ -102,9 +102,9 @@ def recompute_for_account(db: Session, account_id: int) -> int:
 
     trades = list(
         db.scalars(
-            select(Trade).where(Trade.account_id == account_id).order_by(
-                Trade.trading_date, Trade.open_time, Trade.id
-            )
+            select(Trade)
+            .where(Trade.account_id == account_id, Trade.status != "missed")
+            .order_by(Trade.trading_date, Trade.open_time, Trade.id)
         )
     )
     instruments = {i.id: i for i in db.scalars(select(Instrument))}

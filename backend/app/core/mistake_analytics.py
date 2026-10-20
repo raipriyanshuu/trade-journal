@@ -150,7 +150,22 @@ def build(db: Session, trades: list[Trade], tz: str, big_win_r: float) -> dict:
     # --- Clean streak over trading days ---
     streak = _clean_streak(closed, mistake_ids)
 
+    # --- Missed opportunities (setups seen but not taken) ---
+    missed = [t for t in trades if t.status == "missed"]
+    missed_summary = {
+        "count": len(missed),
+        "potential_r": round(sum(float(t.r_multiple) for t in missed if t.r_multiple is not None), 2),
+        "by_type": sorted(
+            (
+                {"type": name, "count": sum(1 for t in missed if name in {g.name for g in t.tags if g.category == "setup"})}
+                for name in {g.name for t in missed for g in t.tags if g.category == "setup"}
+            ),
+            key=lambda x: -x["count"],
+        ),
+    }
+
     return {
+        "missed": missed_summary,
         "cost_by_type": cost_by_type,
         "clean_vs_mistake": clean_vs_mistake,
         "equity_overlay": overlay,

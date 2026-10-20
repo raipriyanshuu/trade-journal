@@ -137,20 +137,86 @@ def _dedup_hash(account_id, instrument_id, ts: datetime, side, qty, price) -> st
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-def _tags_from_row(db: Session, row: dict, tag_columns: list[str]) -> list[int]:
+def _norm(s: str) -> str:
+    return "".join(ch for ch in s.lower() if ch.isalnum())
+
+
+def _tags_from_row(db: Session, row: dict, tag_columns: list) -> list[int]:
+    """Split multi-select cells into tags.
+
+    Each spec is either a column name (category "custom") or
+    {"column": ..., "category": ...}. Names match existing tags in that category
+    ignoring case/spacing/punctuation, so Notion's "Continuation(Thesis Held)"
+    lands on the seeded "Continuation (Thesis Held)".
+    """
     ids: list[int] = []
-    for col in tag_columns or []:
+    for spec in tag_columns or []:
+        if isinstance(spec, str):
+            col, cat = spec, "custom"
+        else:
+            col, cat = spec.get("column"), spec.get("category", "custom")
+        if not col:
+            continue
         raw = row.get(col, "") or ""
+        existing = {_norm(t.name): t for t in db.scalars(select(Tag).where(Tag.category == cat))}
         for name in [t.strip() for part in raw.split(";") for t in part.split(",")]:
             if not name:
                 continue
-            tag = db.scalar(select(Tag).where(Tag.name == name, Tag.category == "custom"))
+            tag = existing.get(_norm(name))
             if tag is None:
-                tag = Tag(name=name, category="custom")
+                tag = Tag(name=name, category=cat)
                 db.add(tag)
                 db.flush()
-            ids.append(tag.id)
+                existing[_norm(name)] = tag
+            if tag.id not in ids:
+                ids.append(tag.id)
     return ids
+
+
+def parse_outcome(raw: str) -> tuple[str | None, bool]:
+    """Notion "Trade" cell -> (outcome, partial_profit)."""
+    s = (raw or "").lower()
+    partial = "partial" in s
+    if "miss" in s:
+        return "missed", partial
+    if "win" in s:
+        return "win", partial
+    if "loss" in s or "lost" in s:
+        return "loss", partial
+    if "break" in s or s.strip() == "be":
+        return "breakeven", partial
+    if partial:
+        return "win", True
+    return None, partial
+
+
+def journal_fields(row: dict, col) -> dict:
+    """Notion-style scalar fields from a row (only those present)."""
+    out: dict = {}
+    for key in ("entry_quality", "exit_quality"):
+        v = str(col(row, key)).strip().upper()
+        if v:
+            out[key] = v
+    htf = str(col(row, "htf_alignment")).strip().lower()
+    if htf.startswith("bull"):
+        out["htf_alignment"] = "bullish"
+    elif htf.startswith("bear"):
+        out["htf_alignment"] = "bearish"
+    elif htf.startswith(("range", "bal", "neutral")):
+        out["htf_alignment"] = "range"
+    for key in ("context", "behaviour", "notes"):
+        v = str(col(row, key)).strip()
+        if v:
+            out[key] = v
+    dtr_atr = str(col(row, "dtr_atr")).strip()
+    if "/" in dtr_atr:
+        a, b = dtr_atr.split("/", 1)
+        out["dtr"], out["atr"] = parse_decimal(a), parse_decimal(b)
+    for key in ("dtr", "atr"):
+        v = parse_decimal(col(row, key))
+        if v is not None:
+            out[key] = v
+    return {k: v for k, v in out.items() if v is not None}
 
 
 def run_import(db: Session, *, content: bytes, config: dict) -> dict:
@@ -254,24 +320,36 @@ def run_import(db: Session, *, content: bytes, config: dict) -> dict:
                 entry_ts = parse_dt(str(col(row, "entry_time")), dt_fmt, tz)
                 exit_ts = parse_dt(str(col(row, "exit_time")), dt_fmt, tz)
                 time_known = entry_ts is not None
+                fields = journal_fields(row, col)
+                outcome, partial = parse_outcome(str(col(row, "outcome")))
+                fields["partial_profit"] = partial
+                if outcome:
+                    fields["outcome"] = outcome
 
-                if entry_price is None or exit_price is None:
-                    # P&L-only trade: created directly, excluded from point/R stats.
-                    if pnl is None:
+                if outcome == "missed" or entry_price is None or exit_price is None:
+                    # Created directly (no executions): a missed setup, a P&L-only
+                    # trade, or a label-only trade that only knows Win/Loss.
+                    if outcome != "missed" and pnl is None and outcome is None:
                         failed += 1
-                        errors.append(f"Row {read}: no prices and no P&L")
+                        errors.append(f"Row {read}: no prices, no P&L and no Win/Loss label")
                         continue
                     td_src = entry_ts or exit_ts
                     td = trading_date_for(td_src, inst) if td_src else datetime.now(timezone.utc).date()
+                    missed = outcome == "missed"
+                    known = pnl is not None and not missed
                     t = Trade(
                         account_id=account_id, instrument_id=inst.id, direction=direction,
                         open_time=entry_ts or session_open_utc(td, inst),
-                        close_time=exit_ts, trading_date=td,
-                        max_position_size=qlots, gross_pnl=pnl, fees=Decimal("0"),
-                        net_pnl=pnl, currency=inst.currency, status="closed",
-                        source=source, pnl_only=True, points_known=False,
-                        time_known=False, import_batch_id=batch.id,
+                        close_time=None if missed else exit_ts, trading_date=td,
+                        max_position_size=qlots, gross_pnl=pnl if known else Decimal("0"),
+                        fees=Decimal("0"), net_pnl=pnl if known else Decimal("0"),
+                        currency=inst.currency, status="missed" if missed else "closed",
+                        source=source, pnl_only=not missed, points_known=False,
+                        pnl_known=known or missed, time_known=time_known,
+                        first_entry_price=entry_price, import_batch_id=batch.id,
                     )
+                    for k, v in fields.items():
+                        setattr(t, k, v)
                     db.add(t)
                     db.flush()
                     for tid in tag_ids:
@@ -289,10 +367,12 @@ def run_import(db: Session, *, content: bytes, config: dict) -> dict:
                 added = add_execution(inst, entry_side, qlots, entry_price, e_ts, fees, ext_id, time_known, row)
                 add_execution(inst, exit_side, qlots, exit_price, x_ts, Decimal("0"),
                               (ext_id + "-x") if ext_id else None, exit_ts is not None, row)
-                # Attach row tags to the trade after rebuild (store for later).
-                if added and tag_ids:
-                    batch_tag_map = config.setdefault("_pending_tags", {})
-                    batch_tag_map[_dedup_hash(account_id, inst.id, e_ts, entry_side, qlots, entry_price)] = tag_ids
+                # Attach row tags + journal fields to the trade after rebuild.
+                if added and (tag_ids or fields):
+                    pending = config.setdefault("_pending_meta", {})
+                    pending[_dedup_hash(account_id, inst.id, e_ts, entry_side, qlots, entry_price)] = {
+                        "tag_ids": tag_ids, "fields": fields,
+                    }
         except Exception as exc:  # noqa: BLE001 - row-level resilience
             failed += 1
             errors.append(f"Row {read}: {exc}")
@@ -302,20 +382,28 @@ def run_import(db: Session, *, content: bytes, config: dict) -> dict:
     for acc_id, inst_id in affected:
         rebuild_for(db, acc_id, inst_id)
 
-    # Apply round-trip row tags to their rebuilt trades (by entry execution hash).
-    pending = config.get("_pending_tags", {})
+    # Apply round-trip row tags + journal fields to the rebuilt trades
+    # (matched by entry execution hash). Stored on the trade, so later rebuilds
+    # preserve them via the builder's metadata anchoring.
+    pending = config.get("_pending_meta", {})
     if pending:
-        for h, tag_ids in pending.items():
+        for h, meta in pending.items():
             ex = db.scalar(select(Execution).where(Execution.dedup_hash == h))
-            if ex and ex.trade_id:
-                for tid in tag_ids:
-                    exists = db.scalar(
-                        select(trade_tags.c.tag_id).where(
-                            trade_tags.c.trade_id == ex.trade_id, trade_tags.c.tag_id == tid
-                        )
+            if not (ex and ex.trade_id):
+                continue
+            trade = db.get(Trade, ex.trade_id)
+            for k, v in meta["fields"].items():
+                if k == "outcome":
+                    continue  # priced trades are classified from real P&L
+                setattr(trade, k, v)
+            for tid in meta["tag_ids"]:
+                exists = db.scalar(
+                    select(trade_tags.c.tag_id).where(
+                        trade_tags.c.trade_id == ex.trade_id, trade_tags.c.tag_id == tid
                     )
-                    if not exists:
-                        db.execute(trade_tags.insert().values(trade_id=ex.trade_id, tag_id=tid))
+                )
+                if not exists:
+                    db.execute(trade_tags.insert().values(trade_id=ex.trade_id, tag_id=tid))
         db.commit()
 
     batch.rows_read = read

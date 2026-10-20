@@ -124,6 +124,51 @@ DEFAULT_SETTINGS = {
         "FADED_TREND_DAY": {"enabled": True},
         "HELD_LOSERS": {"enabled": True, "ratio": 1.5},
     },
+    # Indian charges calculator (Phase 7). Rates change -- verify against your
+    # broker's contract note before trusting them. Percentages are of turnover.
+    "india_charges": {
+        "enabled": True,
+        "verified": False,
+        "NSE": {"brokerage_per_order": "20", "brokerage_pct": "0.03", "stt_sell_pct": "0.02",
+                "exchange_pct": "0.00173", "sebi_per_crore": "10", "stamp_buy_pct": "0.002",
+                "gst_pct": "18"},
+        "MCX": {"brokerage_per_order": "20", "brokerage_pct": "0.03", "stt_sell_pct": "0.01",
+                "exchange_pct": "0.0021", "sebi_per_crore": "10", "stamp_buy_pct": "0.002",
+                "gst_pct": "18"},
+    },
+    # Optional AI weekly review (off by default; the only network call in the app).
+    "ai_review": {"enabled": False, "api_key": "", "model": "claude-opus-5-5"},
+    # Default pre-market readiness checklist for the daily Plan step.
+    "readiness_template": [
+        "Slept well / clear head",
+        "Marked HTF levels & value area",
+        "Checked news calendar",
+        "Defined max loss for the day",
+        "Wrote scenarios A / B / C",
+    ],
+}
+
+# Journal taxonomy, mirroring the Notion trading journal. "setup" = Trade type.
+TAXONOMY_SEEDS: dict[str, list[str]] = {
+    "setup": [
+        "Aggressive Move", "Pullback", "Continuation", "Failed Breakout", "Retest",
+        "Breakdown", "Consolidation Break", "Squeeze after hold", "Trapped Party",
+        "Reversal", "Balance Zone Trade", "Mean Reversion",
+    ],
+    "mistake": [
+        "Not Able to execute", "Not enough Mindful", "Chased Entry", "Early Entry",
+        "FOMO", "Wrong Location to Enter", "Early Exit",
+    ],
+    "location": [
+        "Demand/Supply Zones", "Previous Day's Low", "Previous Day's High",
+        "Between Fair Value", "VWAP", "Consolidation Zone", "Above VAH", "VAH", "VAL",
+        "POC", "Random Area", "Day's Low", "Day's High",
+    ],
+    "probability": ["0-25", "25-35", "35-50", "50-65", "65-75", "75-85", "85-90", "90-100"],
+    "thesis": [
+        "Continuation (Thesis Held)", "Stopped (Analysis was wrong)",
+        "Continued (After taking SL)", "Reversed before target", "Not triggered",
+    ],
 }
 
 
@@ -180,9 +225,25 @@ def seed_mistake_tags(db: Session) -> int:
     return added
 
 
+def seed_taxonomy(db: Session) -> int:
+    """Seed the Notion-style taxonomy; case-insensitive so 'FOMO' isn't duplicated."""
+    existing = {(t.name.lower(), t.category) for t in db.query(Tag).all()}
+    added = 0
+    for category, names in TAXONOMY_SEEDS.items():
+        for name in names:
+            if (name.lower(), category) in existing:
+                continue
+            db.add(Tag(name=name, category=category))
+            existing.add((name.lower(), category))
+            added += 1
+    db.commit()
+    return added
+
+
 def seed_all(db: Session) -> dict[str, int]:
     return {
         "instruments": seed_instruments(db),
         "settings": seed_default_settings(db),
         "mistake_tags": seed_mistake_tags(db),
+        "taxonomy": seed_taxonomy(db),
     }
