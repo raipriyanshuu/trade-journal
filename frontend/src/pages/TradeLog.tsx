@@ -5,7 +5,7 @@ import { useReference } from "../lib/useReference";
 import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
-import { GradeBadge, HtfBadge, ResultBadge, TagChips } from "../components/journal/Pickers";
+import { CATEGORY_LABELS, GradeBadge, HtfBadge, ResultBadge, TagChips } from "../components/journal/Pickers";
 
 type View = "journal" | "numbers";
 
@@ -20,7 +20,7 @@ function loadView(): View {
 export default function TradeLog() {
   const nav = useNavigate();
   const { tz } = useConfig();
-  const { accounts, instruments, tags } = useReference();
+  const { accounts, instruments, tags, reloadTags } = useReference();
   const [filters, setFilters] = useState<TradeFilters>({ sort_by: "open_time", order: "desc" });
   const [trades, setTrades] = useState<TradeSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,24 @@ export default function TradeLog() {
     try { localStorage.setItem("tradelog.view", v); } catch { /* storage unavailable */ }
   }
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [bulkTagId, setBulkTagId] = useState<number | "">("");
+  const [bulkTagId, setBulkTagId] = useState<number | "" | "new">("");
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagCat, setNewTagCat] = useState("setup");
+
+  async function createAndApplyTag() {
+    if (!newTagName.trim() || selected.size === 0) return;
+    try {
+      const tag = await api.createTag(newTagName.trim(), newTagCat);
+      await api.bulkTag([...selected], [tag.id], []);
+      reloadTags();
+      setNewTagName("");
+      setBulkTagId("");
+      setSelected(new Set());
+      load();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
 
   function toggleSel(id: number) {
     setSelected((s) => {
@@ -44,7 +61,7 @@ export default function TradeLog() {
   }
 
   async function applyBulkTag(mode: "add" | "remove") {
-    if (!bulkTagId || selected.size === 0) return;
+    if (!bulkTagId || bulkTagId === "new" || selected.size === 0) return;
     await api.bulkTag([...selected], mode === "add" ? [Number(bulkTagId)] : [], mode === "remove" ? [Number(bulkTagId)] : []);
     setSelected(new Set());
     load();
@@ -146,12 +163,37 @@ export default function TradeLog() {
       {selected.size > 0 && (
         <div className="card p-2 mb-3 flex items-center gap-2 text-sm bg-accent/10">
           <span className="text-ink">{selected.size} selected</span>
-          <select className="input !w-auto !py-1" value={bulkTagId} onChange={(e) => setBulkTagId(Number(e.target.value))}>
+          <select className="input !w-auto !py-1" value={bulkTagId}
+            onChange={(e) => setBulkTagId(e.target.value === "new" ? "new" : e.target.value ? Number(e.target.value) : "")}>
             <option value="">Pick tag&hellip;</option>
-            {tags.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.category})</option>)}
+            <option value="new">+ New tag&hellip;</option>
+            {Object.entries(CATEGORY_LABELS).map(([cat, label]) => {
+              const inCat = tags.filter((t) => t.category === cat);
+              return inCat.length ? (
+                <optgroup key={cat} label={label}>
+                  {inCat.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </optgroup>
+              ) : null;
+            })}
           </select>
-          <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("add")}>Add tag</button>
-          <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("remove")}>Remove tag</button>
+          {bulkTagId === "new" ? (
+            <>
+              <input autoFocus className="input !w-44 !py-1" placeholder="tag name" value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createAndApplyTag()} />
+              <select className="input !w-auto !py-1" value={newTagCat} onChange={(e) => setNewTagCat(e.target.value)}>
+                {Object.entries(CATEGORY_LABELS).map(([cat, label]) => <option key={cat} value={cat}>{label}</option>)}
+              </select>
+              <button className="btn-primary !py-1 text-xs" onClick={createAndApplyTag} disabled={!newTagName.trim()}>
+                Create &amp; add to {selected.size}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("add")}>Add tag</button>
+              <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("remove")}>Remove tag</button>
+            </>
+          )}
           <button className="btn-ghost !py-1 text-xs ml-auto" onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       )}

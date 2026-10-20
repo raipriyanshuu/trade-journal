@@ -45,14 +45,33 @@ def test_tag_rename_and_archive(client):
     assert "scalping" not in names
 
 
+def test_create_tag_reuses_case_insensitive_match(client):
+    a = client.post("/api/tags", json={"name": "Opening Drive", "category": "setup"})
+    assert a.status_code == 201
+    b = client.post("/api/tags", json={"name": "  opening   drive ", "category": "setup"}).json()
+    assert b["id"] == a.json()["id"] and b["name"] == "Opening Drive"
+    # Same name in a different category is a different tag.
+    c = client.post("/api/tags", json={"name": "Opening Drive", "category": "custom"}).json()
+    assert c["id"] != b["id"]
+    # An archived tag comes back instead of being duplicated.
+    client.patch(f"/api/tags/{b['id']}", json={"archived": True})
+    d = client.post("/api/tags", json={"name": "OPENING DRIVE", "category": "setup"}).json()
+    assert d["id"] == b["id"] and d["archived"] is False
+    assert client.post("/api/tags", json={"name": "   ", "category": "setup"}).status_code == 422
+
+
 def test_tag_merge(client):
-    a = client.post("/api/tags", json={"name": "fomo", "category": "mistake"}).json()
+    a = client.post("/api/tags", json={"name": "fear of missing out", "category": "mistake"}).json()
     b = client.post("/api/tags", json={"name": "FOMO", "category": "mistake"}).json()
+    assert a["id"] != b["id"]
     client.post(f"/api/tags/{a['id']}/merge/{b['id']}")
     # Source gone.
     ids = [t["id"] for t in client.get("/api/tags", params={"include_archived": True}).json()]
     assert a["id"] not in ids
     assert b["id"] in ids
+    # Merging a tag into itself is refused (it used to delete the tag).
+    assert client.post(f"/api/tags/{b['id']}/merge/{b['id']}").status_code == 422
+    assert b["id"] in [t["id"] for t in client.get("/api/tags").json()]
 
 
 def test_bulk_tag(client):

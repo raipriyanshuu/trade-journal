@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -44,12 +44,21 @@ def list_tags(include_archived: bool = False, db: Session = Depends(get_db)):
 def create_tag(payload: TagCreate, db: Session = Depends(get_db)):
     if payload.category not in TAG_CATEGORIES:
         raise HTTPException(422, f"category must be one of {TAG_CATEGORIES}")
+    name = " ".join(payload.name.split())
+    if not name:
+        raise HTTPException(422, "Tag name can't be empty")
+    # Reuse an existing tag that differs only in case ("fomo" == "FOMO"), and
+    # bring it back if it was archived -- the user clearly wants to use it.
     existing = db.scalar(
-        select(Tag).where(Tag.name == payload.name, Tag.category == payload.category)
+        select(Tag).where(func.lower(Tag.name) == name.lower(), Tag.category == payload.category)
     )
     if existing:
+        if existing.archived:
+            existing.archived = False
+            db.commit()
+            db.refresh(existing)
         return existing
-    tag = Tag(name=payload.name, category=payload.category)
+    tag = Tag(name=name, category=payload.category)
     db.add(tag)
     db.commit()
     db.refresh(tag)
@@ -71,6 +80,8 @@ def update_tag(tag_id: int, payload: TagUpdate, db: Session = Depends(get_db)):
 @router.post("/{tag_id}/merge/{into_id}", response_model=TagRead)
 def merge_tag(tag_id: int, into_id: int, db: Session = Depends(get_db)):
     """Move every trade from tag_id onto into_id, then delete tag_id."""
+    if tag_id == into_id:
+        raise HTTPException(422, "Pick two different tags to merge")
     src = db.get(Tag, tag_id)
     dst = db.get(Tag, into_id)
     if src is None or dst is None:

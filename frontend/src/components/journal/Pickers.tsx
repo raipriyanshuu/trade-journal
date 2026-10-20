@@ -1,4 +1,5 @@
-import { Tag } from "../../lib/api";
+import { useState } from "react";
+import { api, Tag } from "../../lib/api";
 
 // Notion-style taxonomy. "setup" is labelled "Trade type" everywhere in the UI.
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -42,6 +43,11 @@ export function TagChips({ tags, category, max = 4 }: { tags: Tag[]; category?: 
   );
 }
 
+/**
+ * Tag chips for one category, with an inline "+ tag" to create a new one.
+ * A new tag is saved to that category right away and selected; typing an
+ * existing name (any case) just selects the existing tag.
+ */
 export function ChipPicker({
   tags, category, selected, onToggle,
 }: {
@@ -50,12 +56,37 @@ export function ChipPicker({
   selected: number[];
   onToggle: (id: number) => void;
 }) {
-  const list = tags.filter((t) => t.category === category);
-  if (list.length === 0) return null;
+  const [added, setAdded] = useState<Tag[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const list = [...tags, ...added.filter((a) => !tags.some((t) => t.id === a.id))]
+    .filter((t) => t.category === category);
+
+  async function create() {
+    const clean = name.trim();
+    if (!clean) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const tag = await api.createTag(clean, category);
+      if (!list.some((t) => t.id === tag.id)) setAdded((a) => [...a, tag]);
+      if (!selected.includes(tag.id)) onToggle(tag.id);
+      setName("");
+      setAdding(false);
+    } catch (e) {
+      setErr((e as Error).message.replace(/^\d+:\s*/, ""));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <label className="label">{CATEGORY_LABELS[category] ?? category}</label>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {list.map((t) => {
           const on = selected.includes(t.id);
           return (
@@ -65,7 +96,35 @@ export function ChipPicker({
             </button>
           );
         })}
+        {adding ? (
+          <span className="inline-flex items-center gap-1">
+            <input
+              autoFocus
+              className="input !w-40 !py-0.5 !px-2 text-xs"
+              placeholder={`new ${(CATEGORY_LABELS[category] ?? category).toLowerCase()}`}
+              value={name}
+              disabled={busy}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); create(); }
+                if (e.key === "Escape") { setAdding(false); setName(""); }
+              }}
+            />
+            <button type="button" className="badge bg-accent/20 text-accent-soft" onClick={create} disabled={busy || !name.trim()}>
+              {busy ? "…" : "add"}
+            </button>
+            <button type="button" className="text-ink-faint hover:text-ink text-xs" onClick={() => { setAdding(false); setName(""); }}>
+              &times;
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setAdding(true)}
+            className="badge border border-dashed border-card-border text-ink-faint hover:text-ink hover:border-ink-faint">
+            + tag
+          </button>
+        )}
       </div>
+      {err && <p className="text-xs text-neg mt-1">{err}</p>}
     </div>
   );
 }
