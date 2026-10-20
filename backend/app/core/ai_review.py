@@ -1,6 +1,7 @@
 """Optional AI weekly review via the Claude API.
 
-Off by default; the only network call in the app. Sends an anonymized summary
+Off by default (one of two opt-in network features, with delayed CME charts).
+Sends an anonymized summary
 of a report (no account names or ids, no notes text) and returns a written review.
 """
 

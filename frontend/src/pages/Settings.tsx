@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import MarketDataTab from "../components/settings/MarketDataTab";
 import InstrumentsTab from "../components/settings/InstrumentsTab";
 import AccountsTab from "../components/settings/AccountsTab";
 import PreferencesTab from "../components/settings/PreferencesTab";
@@ -14,6 +16,7 @@ const TABS = [
   { key: "tags", label: "Tags" },
   { key: "rules", label: "Mistake rules" },
   { key: "charges", label: "India charges" },
+  { key: "market", label: "Market data" },
   { key: "ai", label: "AI review" },
   { key: "preferences", label: "Preferences" },
   { key: "demo", label: "Demo Data" },
@@ -22,7 +25,9 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export default function Settings() {
-  const [tab, setTab] = useState<TabKey>("instruments");
+  const [params] = useSearchParams();
+  const initial = TABS.find((t) => t.key === params.get("tab"))?.key ?? "instruments";
+  const [tab, setTab] = useState<TabKey>(initial);
 
   return (
     <div>
@@ -48,6 +53,7 @@ export default function Settings() {
       {tab === "tags" && <TagsTab />}
       {tab === "rules" && <RulesTab />}
       {tab === "charges" && <ChargesTab />}
+      {tab === "market" && <MarketDataTab />}
       {tab === "ai" && <AiTab />}
       {tab === "preferences" && <PreferencesTab />}
       {tab === "demo" && <DemoTab />}

@@ -165,6 +165,9 @@ export interface ReplayData {
   lines: { price: number; title: string; color: string; style: number }[];
   excursion: Excursion | null;
   tz: string;
+  sources: string[];
+  can_fetch: boolean;
+  fetch_enabled: boolean;
 }
 
 export interface TradeDetail extends TradeSummary {
@@ -385,6 +388,12 @@ export const api = {
 
   // Phase 7: replay, MAE/MFE, bars, reports, AI review, charges
   replay: (tradeId: number) => request<ReplayData>(`/api/trades/${tradeId}/replay`),
+  fetchTradeBars: (tradeId: number, force = false) =>
+    request<{ status: string; symbol: string; timeframe: string; added: number }>(
+      `/api/trades/${tradeId}/fetch-bars${force ? "?force=true" : ""}`, { method: "POST" }),
+  marketDataBackfill: () =>
+    request<{ trades: number; fetched: number; cached: number; failed: number; errors: string[] }>(
+      "/api/market-data/backfill", { method: "POST" }),
   maeMfe: (filters: Record<string, string | number | boolean | undefined> = {}) => {
     const qs = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });

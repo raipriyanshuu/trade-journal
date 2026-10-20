@@ -23,7 +23,7 @@ export default function AiTab() {
     <div className="max-w-xl space-y-4">
       <div className="card p-4 text-sm text-ink-muted space-y-2">
         <p><span className="text-ink font-medium">Optional and off by default.</span> When enabled, the Reports page can ask Claude to write a weekly or monthly review.</p>
-        <p>This is the <span className="text-ink">only</span> network call the app makes. It sends an anonymized statistics summary &mdash; KPIs, setup and mistake totals, discipline counts &mdash; with no account names, trade notes or lessons. Each review is billed to your Anthropic API key.</p>
+        <p>It sends an anonymized statistics summary &mdash; KPIs, setup and mistake totals, discipline counts &mdash; with no account names, trade notes or lessons. Each review is billed to your Anthropic API key.</p>
       </div>
       <div className="card p-4 space-y-3">
         <label className="flex items-center gap-2 text-sm">

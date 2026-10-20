@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.bars import bars_between
 from app.core.excursions import excursion
+from app.core.market_data import get_config, yahoo_symbol
 from app.models import DailySession, Instrument, Trade
 
 
@@ -25,10 +26,12 @@ def _local_epoch(ts: datetime, zone: ZoneInfo) -> int:
 def replay(db: Session, trade: Trade, tz: str, before_h: float = 3, after_h: float = 2) -> dict:
     zone = ZoneInfo(tz)
     inst = db.get(Instrument, trade.instrument_id)
+    md_cfg = get_config(db)
     end_anchor = trade.close_time or trade.open_time
     start = trade.open_time - timedelta(hours=before_h)
     end = end_anchor + timedelta(hours=after_h)
     tf, bars = bars_between(db, trade.instrument_id, start, end)
+    sources = sorted({b.source for b in bars})
 
     candles = [
         {"time": _local_epoch(b.ts, zone), "open": float(b.open), "high": float(b.high),
@@ -93,9 +96,13 @@ def replay(db: Session, trade: Trade, tz: str, before_h: float = 3, after_h: flo
         "trade_id": trade.id,
         "symbol": inst.symbol_root if inst else "",
         "timeframe": tf,
+        "sources": sources,
         "candles": candles,
         "markers": markers,
         "lines": lines,
         "excursion": excursion(db, trade, inst),
         "tz": tz,
+        # Whether a delayed Yahoo chart could be fetched for this instrument.
+        "can_fetch": bool(inst and yahoo_symbol(md_cfg, inst)),
+        "fetch_enabled": bool(md_cfg.get("enabled")),
     }

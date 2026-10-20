@@ -3,8 +3,12 @@
 A **local, single-user trading journal** for futures (CME/COMEX/NYMEX) and Indian
 markets (NSE/MCX), built around orderflow and Market Profile / auction-market
 concepts. It runs entirely on your machine, stores data in SQLite, and opens in
-your browser. No data leaves your computer (the only optional network call is the
-AI weekly review in Phase 7, off by default).
+your browser. Your trades never leave your computer. Two optional network
+features are off by default: delayed CME charts from Yahoo Finance (sends only a
+ticker and time window) and the AI weekly review (sends anonymized statistics).
+
+Local snapshots of the database are written to `data/backups/` on startup and
+before every migration.
 
 ## Core design principle: one pipeline
 

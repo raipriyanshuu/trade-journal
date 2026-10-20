@@ -10,11 +10,12 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.market_data import auto_fetch_trade
 from app.core.mistakes import recompute_for_account
 from app.core.results import breakeven_threshold, serialize_detail, serialize_summary, trade_result
 from app.core.trade_builder import rebuild_for
@@ -131,7 +132,7 @@ def get_trade(trade_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/manual", response_model=TradeDetail, status_code=201)
-def create_manual(payload: ManualTradeCreate, db: Session = Depends(get_db)):
+def create_manual(payload: ManualTradeCreate, background: BackgroundTasks, db: Session = Depends(get_db)):
     acc = db.get(Account, payload.account_id)
     if acc is None:
         raise HTTPException(404, "Account not found")
@@ -176,6 +177,8 @@ def create_manual(payload: ManualTradeCreate, db: Session = Depends(get_db)):
 
     _apply_trade_meta(db, trade, payload)
     recompute_for_account(db, acc.id)
+    # Opt-in delayed chart: fetched after the response so saving never waits on it.
+    background.add_task(auto_fetch_trade, trade.id)
     return serialize_detail(db, _get_trade_or_404(db, trade.id))
 
 
@@ -215,7 +218,7 @@ def _apply_journal_fields(trade: Trade, payload) -> None:
 
 
 @router.post("/missed", response_model=TradeDetail, status_code=201)
-def create_missed(payload: MissedTradeCreate, db: Session = Depends(get_db)):
+def create_missed(payload: MissedTradeCreate, background: BackgroundTasks, db: Session = Depends(get_db)):
     """Log a setup you saw but did not take (no executions, no P&L)."""
     from app.core.sessions import trading_date_for
 
@@ -248,6 +251,7 @@ def create_missed(payload: MissedTradeCreate, db: Session = Depends(get_db)):
     db.flush()
     _set_tags(db, trade, payload.tag_ids)
     db.commit()
+    background.add_task(auto_fetch_trade, trade.id)  # chart of the setup you missed
     return serialize_detail(db, _get_trade_or_404(db, trade.id))
 
 

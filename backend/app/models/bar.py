@@ -32,3 +32,6 @@ class Bar(Base, DemoMixin):
     low: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
     close: Mapped[Decimal] = mapped_column(DecimalText, nullable=False)
     volume: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)
+    # Where the bar came from: "import" (CSV), "yahoo" (delayed, continuous
+    # front-month contract) or "demo".
+    source: Mapped[str] = mapped_column(String, nullable=False, default="import", server_default="import")

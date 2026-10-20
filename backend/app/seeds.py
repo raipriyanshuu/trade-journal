@@ -136,8 +136,15 @@ DEFAULT_SETTINGS = {
                 "exchange_pct": "0.0021", "sebi_per_crore": "10", "stamp_buy_pct": "0.002",
                 "gst_pct": "18"},
     },
-    # Optional AI weekly review (off by default; the only network call in the app).
+    # Optional AI weekly review (off by default; network call to the Claude API).
     "ai_review": {"enabled": False, "api_key": "", "model": "claude-opus-5-5"},
+    # Optional delayed CME charts from Yahoo Finance (off by default; network).
+    "market_data": {
+        "enabled": False,
+        "auto_fetch_on_save": True,
+        "symbols": {"ES": "ES=F", "MES": "ES=F", "NQ": "NQ=F", "MNQ": "NQ=F",
+                    "GC": "GC=F", "MGC": "GC=F", "CL": "CL=F", "MCL": "CL=F"},
+    },
     # Default pre-market readiness checklist for the daily Plan step.
     "readiness_template": [
         "Slept well / clear head",

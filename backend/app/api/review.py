@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core import bars as bars_core
-from app.core import excursions
+from app.core import excursions, market_data
 from app.core.ai_review import AIReviewError
 from app.core.ai_review import review as ai_review
 from app.core.charges import estimate
@@ -47,6 +47,26 @@ def bar_coverage(db: Session = Depends(get_db)):
 @router.delete("/bars")
 def delete_bars(instrument_id: int, timeframe: str, db: Session = Depends(get_db)):
     return {"deleted": bars_core.delete_bars(db, instrument_id, timeframe)}
+
+
+# ---------------- Delayed charts (Yahoo, CME only, opt-in) ----------------
+@router.post("/trades/{trade_id}/fetch-bars")
+def fetch_trade_bars(trade_id: int, force: bool = False, db: Session = Depends(get_db)):
+    trade = db.get(Trade, trade_id)
+    if trade is None:
+        raise HTTPException(404, "Trade not found")
+    try:
+        return market_data.fetch_for_trade(db, trade, force=force)
+    except market_data.MarketDataError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.post("/market-data/backfill")
+def market_data_backfill(days: int = 59, db: Session = Depends(get_db)):
+    try:
+        return market_data.backfill(db, days)
+    except market_data.MarketDataError as exc:
+        raise HTTPException(400, str(exc))
 
 
 # ---------------- Replay + MAE/MFE ----------------

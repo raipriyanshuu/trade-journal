@@ -53,9 +53,15 @@ export default function Excursions() {
       <AnalyticsFilterBar filters={filters} onChange={setFilters} />
 
       {!data ? <p className="text-ink-muted text-sm">Loading&hellip;</p> : data.covered_trades === 0 ? (
-        <div className="card p-10 text-center text-ink-muted">
-          None of the {data.closed_trades} closed trades in range have bar coverage yet.
-          Import 1m or 5m OHLCV bars in <button className="text-accent-soft hover:underline" onClick={() => nav("/data")}>Import / Export &rarr; Bar data</button>.
+        <div className="card p-10 text-center text-ink-muted space-y-3">
+          <p>
+            None of the {data.closed_trades} closed trades in range have bar coverage yet.
+            For ES / Gold / Crude, turn on delayed charts in{" "}
+            <button className="text-accent-soft hover:underline" onClick={() => nav("/settings?tab=market")}>Settings &rarr; Market data</button>
+            {" "}and fetch them; for anything else import bars in{" "}
+            <button className="text-accent-soft hover:underline" onClick={() => nav("/data")}>Import / Export &rarr; Bar data</button>.
+          </p>
+          <BackfillButton onDone={() => api.maeMfe({ ...(filters as any), adverse_r: adverse }).then(setData)} />
         </div>
       ) : (
         <>
@@ -115,6 +121,30 @@ export default function Excursions() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function BackfillButton({ onDone }: { onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  async function run() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api.marketDataBackfill();
+      setMsg(`${r.fetched} charts fetched, ${r.cached} already stored, ${r.failed} failed.`);
+      onDone();
+    } catch (e) {
+      setMsg((e as Error).message.replace(/^\d+:\s*/, ""));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div>
+      <button className="btn-primary" onClick={run} disabled={busy}>{busy ? "Fetching charts…" : "Fetch delayed charts for recent CME trades"}</button>
+      {msg && <p className="text-xs mt-2">{msg}</p>}
     </div>
   );
 }

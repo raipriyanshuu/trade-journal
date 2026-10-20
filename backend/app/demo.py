@@ -253,7 +253,8 @@ def _demo_bars(instrument_id: int) -> list[Bar]:
                 lo = min(o, close) - tick * rng.randint(0, 3)
                 bars.append(Bar(instrument_id=instrument_id, timeframe="1m",
                                 ts=start + timedelta(minutes=m), open=o, high=hi, low=lo,
-                                close=close, volume=Decimal(rng.randint(800, 4000)), is_demo=True))
+                                close=close, volume=Decimal(rng.randint(800, 4000)),
+                                source="demo", is_demo=True))
                 prev_close = close
     # Make sure fills sit inside their bars.
     fills = {_dt(2026, 10, 13, 14, 0): 5000, _dt(2026, 10, 13, 14, 30): 5010,

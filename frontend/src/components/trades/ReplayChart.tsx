@@ -11,10 +11,37 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
   const el = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<ReplayData | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const [fetchErr, setFetchErr] = useState<string | null>(null);
+  const autoTried = useRef(false);
+
+  const load = () => api.replay(tradeId).then(setData).catch((e) => setErr((e as Error).message));
+
+  async function fetchChart(force = false) {
+    setFetching(true);
+    setFetchErr(null);
+    try {
+      await api.fetchTradeBars(tradeId, force);
+      await load();
+    } catch (e) {
+      setFetchErr((e as Error).message.replace(/^\d+:\s*/, ""));
+    } finally {
+      setFetching(false);
+    }
+  }
 
   useEffect(() => {
-    api.replay(tradeId).then(setData).catch((e) => setErr((e as Error).message));
+    autoTried.current = false;
+    load();
   }, [tradeId]);
+
+  // No chart yet but a delayed one is available: fetch it automatically, once.
+  useEffect(() => {
+    if (data && data.candles.length === 0 && data.can_fetch && data.fetch_enabled && !autoTried.current) {
+      autoTried.current = true;
+      fetchChart();
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!el.current || !data || data.candles.length === 0) return;
@@ -62,19 +89,46 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
   if (!data) return <p className="text-ink-faint text-sm">Loading chart&hellip;</p>;
   if (data.candles.length === 0) {
     return (
-      <div className="bg-bg-soft rounded-lg p-6 text-center text-sm text-ink-muted">
-        No bar data covers this trade yet. Import 1m or 5m bars for {data.symbol} in{" "}
-        <Link to="/data" className="text-accent-soft hover:underline">Import / Export &rarr; Bar data</Link> to replay it and get MAE/MFE.
+      <div className="bg-bg-soft rounded-lg p-6 text-center text-sm text-ink-muted space-y-2">
+        {fetching ? (
+          <p>Fetching the delayed {data.symbol} chart from Yahoo Finance&hellip;</p>
+        ) : data.can_fetch && data.fetch_enabled ? (
+          <>
+            <p>{fetchErr ?? "No chart stored for this trade yet."}</p>
+            <button className="btn-primary" onClick={() => fetchChart()}>Fetch delayed chart</button>
+          </>
+        ) : data.can_fetch ? (
+          <p>
+            Turn on delayed charts in{" "}
+            <Link to="/settings?tab=market" className="text-accent-soft hover:underline">Settings &rarr; Market data</Link>{" "}
+            to load this {data.symbol} chart automatically, or import bars in{" "}
+            <Link to="/data" className="text-accent-soft hover:underline">Import / Export &rarr; Bar data</Link>.
+          </p>
+        ) : (
+          <p>
+            No bar data covers this trade yet. Import 1m or 5m bars for {data.symbol} in{" "}
+            <Link to="/data" className="text-accent-soft hover:underline">Import / Export &rarr; Bar data</Link> to replay it and get MAE/MFE.
+          </p>
+        )}
       </div>
     );
   }
 
   const ex = data.excursion;
+  const fromYahoo = data.sources.includes("yahoo");
   return (
     <div>
       <div ref={el} className="h-[380px] w-full rounded-lg overflow-hidden" />
       <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-sm">
-        <span className="text-ink-faint">{data.timeframe} bars &middot; times in {data.tz}</span>
+        <span className="text-ink-faint">
+          {data.timeframe} bars &middot; times in {data.tz}
+          {fromYahoo && <> &middot; Yahoo Finance (delayed, continuous front-month)</>}
+          {data.can_fetch && data.fetch_enabled && (
+            <button className="ml-2 text-accent-soft hover:underline" onClick={() => fetchChart(true)} disabled={fetching}>
+              {fetching ? "refreshing…" : "refresh"}
+            </button>
+          )}
+        </span>
         {ex && (
           <>
             <span>MFE <span className="font-mono text-pos">{ex.mfe_points} pts{ex.mfe_r !== null ? ` · ${ex.mfe_r.toFixed(2)}R` : ""}</span></span>
