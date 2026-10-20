@@ -87,12 +87,33 @@ def test_replay_payload(client):
     r = client.get(f"/api/trades/{t['id']}/replay").json()
     assert r["timeframe"] == "1m"
     assert len(r["candles"]) == 31
-    assert len(r["markers"]) == 2
+    # Fills carry their exact price and are checked against their minute's bar.
+    entry, exit_ = r["fills"]
+    assert entry["price"] == 5000.0 and entry["side"] == "buy" and entry["is_entry"] is True
+    assert entry["matched"] is True            # 14:00 bar traded 5000-5005
+    assert exit_["price"] == 5010.0 and exit_["matched"] is False  # 14:30 bar only 5000-5005
+    # The warning points at the nearest time 5010 really traded (14:20 UTC = 19:50 IST).
+    assert any("5010" in w and "19:50" in w for w in r["fill_warnings"])
     assert any(line["title"] == "Stop" for line in r["lines"])
     # Times are shifted into IST (UTC+5:30) for display.
     from datetime import datetime, timezone
     utc_epoch = int(datetime(2026, 10, 14, 14, 0, tzinfo=timezone.utc).timestamp())
     assert r["candles"][0]["time"] - utc_epoch == 19800
+
+
+def test_exit_hint_never_points_before_the_entry(client):
+    acc, es = _acc(client), _inst(client, "ES")
+    _import_bars(client, es)
+    # Entry logged 14:00 @ 4996 really traded only at 14:05; exit logged 14:30 @
+    # 5012 really traded only at 14:20 -- the hints must keep that order.
+    t = client.post("/api/trades/manual", json={
+        "account_id": acc["id"], "instrument_id": es["id"], "direction": "long",
+        "entries": [{"time": "2026-10-14T14:00:00Z", "price": "4996", "quantity": "1"}],
+        "exits": [{"time": "2026-10-14T14:30:00Z", "price": "5012", "quantity": "1"}],
+    }).json()
+    w = client.get(f"/api/trades/{t['id']}/replay").json()["fill_warnings"]
+    assert "19:35" in next(x for x in w if x.startswith("Entry"))  # 14:05 UTC
+    assert "19:50" in next(x for x in w if x.startswith("Exit"))   # 14:20 UTC, after the entry
 
 
 def test_journal_fields_round_trip(client):

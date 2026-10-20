@@ -60,21 +60,45 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
     const candles = data.candles.map((c) => ({ ...c, time: c.time as UTCTimestamp }));
     series.setData(candles);
 
-    // Snap each marker onto the candle that contains it, so it always renders.
+    // Snap each fill onto the candle that contains it (markers need a data point).
     const times = candles.map((c) => c.time as number);
     const snap = (t: number) => {
       let best = times[0];
       for (const ct of times) if (ct <= t) best = ct;
       return best as UTCTimestamp;
     };
-    series.setMarkers(
-      data.markers
-        .map((m) => ({
-          time: snap(m.time), position: m.position as SeriesMarkerPosition, color: m.color,
-          shape: m.shape as SeriesMarkerShape, text: m.text,
-        }))
-        .sort((a, b) => (a.time as number) - (b.time as number)),
-    );
+    const fills = [...data.fills].sort((a, b) => a.time - b.time);
+
+    // Dashed path from entry to exit through every fill (one point per candle).
+    const path = new Map<number, number>();
+    for (const f of fills) if (!f.missed) path.set(snap(f.time) as number, f.price);
+    if (path.size >= 2) {
+      const pathSeries = chart.addLineSeries({
+        color: "#8f8dfb", lineWidth: 1, lineStyle: LineStyle.Dashed, lastValueVisible: false,
+        priceLineVisible: false, crosshairMarkerVisible: false,
+      });
+      pathSeries.setData([...path.entries()].map(([time, value]) => ({ time: time as UTCTimestamp, value })));
+    }
+
+    // Each fill is its own tiny invisible series so the arrow sits at the exact
+    // fill price ("inBar") instead of under/over the candle.
+    for (const f of fills) {
+      const t = snap(f.time);
+      const color = f.missed ? "#f3b53d" : f.matched === false ? "#f3b53d" : f.side === "buy" ? "#22c58b" : "#f0566b";
+      const s = chart.addLineSeries({
+        lineVisible: false, pointMarkersVisible: false, lastValueVisible: false,
+        priceLineVisible: false, crosshairMarkerVisible: false,
+      });
+      s.setData([{ time: t, value: f.price }]);
+      const label = f.missed
+        ? `missed ${f.side} @ ${f.price}`
+        : `${f.is_entry ? "IN" : "OUT"} ${f.side} ${f.quantity} @ ${f.price}${f.matched === false ? " ⚠" : ""}`;
+      s.setMarkers([{
+        time: t, position: "inBar" as SeriesMarkerPosition, color,
+        shape: (f.missed ? "circle" : f.side === "buy" ? "arrowUp" : "arrowDown") as SeriesMarkerShape,
+        text: label,
+      }]);
+    }
     for (const l of data.lines) {
       series.createPriceLine({
         price: l.price, color: l.color, lineWidth: 1, lineStyle: LINE_STYLES[l.style] ?? LineStyle.Dashed,
@@ -119,6 +143,15 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
   return (
     <div>
       <div ref={el} className="h-[380px] w-full rounded-lg overflow-hidden" />
+      {data.fill_warnings.length > 0 && (
+        <div className="mt-3 rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm">
+          <div className="font-medium text-warn mb-1">&#9888; Fill prices don&rsquo;t match the chart at the logged times</div>
+          <ul className="list-disc ml-5 space-y-0.5 text-ink-muted">
+            {data.fill_warnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+          <p className="text-xs text-ink-faint mt-1">Fix the times under Executions (Edit) and the chart, MAE/MFE and time-of-day stats update automatically.</p>
+        </div>
+      )}
       <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-sm">
         <span className="text-ink-faint">
           {data.timeframe} bars &middot; times in {data.tz}

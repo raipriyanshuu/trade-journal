@@ -161,7 +161,11 @@ export interface ReplayData {
   symbol: string;
   timeframe: string | null;
   candles: { time: number; open: number; high: number; low: number; close: number }[];
-  markers: { time: number; position: string; color: string; shape: string; text: string }[];
+  fills: {
+    time: number; price: number; side: string; quantity: string; is_entry: boolean;
+    matched: boolean | null; bar_low: number | null; bar_high: number | null; missed?: boolean;
+  }[];
+  fill_warnings: string[];
   lines: { price: number; title: string; color: string; style: number }[];
   excursion: Excursion | null;
   tz: string;
