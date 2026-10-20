@@ -44,6 +44,36 @@ export function TagChips({ tags, category, max = 4 }: { tags: Tag[]; category?: 
 }
 
 /**
+ * Everything counted as a mistake on a trade: mistake tags plus mistakes typed
+ * into the trade's "Mistake flags" box (same red chips), and a small amber
+ * badge for the mistake engine's automatic flags.
+ */
+export function MistakeChips({ trade, max = 4 }: {
+  trade: { tags: Tag[]; manual_flags?: string[]; auto_flags?: string[] };
+  max?: number;
+}) {
+  const names = [
+    ...trade.tags.filter((t) => t.category === "mistake").map((t) => t.name),
+    ...(trade.manual_flags ?? []),
+  ];
+  const auto = trade.auto_flags ?? [];
+  if (names.length === 0 && auto.length === 0) return <span className="text-ink-faint">&mdash;</span>;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {names.slice(0, max).map((n, i) => (
+        <span key={`${n}-${i}`} className="badge whitespace-nowrap bg-neg/15 text-neg">{n}</span>
+      ))}
+      {names.length > max && <span className="text-xs text-ink-faint">+{names.length - max}</span>}
+      {auto.length > 0 && (
+        <span className="badge bg-warn/15 text-warn" title={`Auto flags: ${auto.join(", ")}`}>
+          &#9873; {auto.length}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
  * Tag chips for one category, with an inline "+ tag" to create a new one.
  * A new tag is saved to that category right away and selected; typing an
  * existing name (any case) just selects the existing tag.

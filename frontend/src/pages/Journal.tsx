@@ -6,7 +6,7 @@ import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, localInputToUtcIso, pnlColor, utcIsoToLocalInput } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
 import {
-  GradeBadge, GradePicker, HtfBadge, HtfPicker, ResultBadge, TagChips,
+  GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, TagChips,
 } from "../components/journal/Pickers";
 
 type Step = "plan" | "execute" | "review";
@@ -385,7 +385,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
               <td className="px-3 py-2"><TagChips tags={t.tags} category="thesis" /></td>
               <td className="px-3 py-2"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
               <td className="px-3 py-2"><TagChips tags={t.tags} category="setup" /></td>
-              <td className="px-3 py-2"><TagChips tags={t.tags} category="mistake" /></td>
+              <td className="px-3 py-2"><MistakeChips trade={t} /></td>
               <td className="px-3 py-2"><GradeBadge grade={t.entry_quality} /></td>
               <td className="px-3 py-2"><GradeBadge grade={t.exit_quality} /></td>
               <td className="px-3 py-2"><TagChips tags={t.tags} category="location" /></td>
@@ -416,7 +416,9 @@ function ReviewStep({ form, set, trades }: {
   const gradeScore: Record<string, number> = { "A+": 4, A: 3, B: 2, C: 1 };
   const graded = closed.filter((t) => t.entry_quality);
   const avgEntry = graded.length ? graded.reduce((s, t) => s + (gradeScore[t.entry_quality!] ?? 0), 0) / graded.length : null;
-  const mistakeTrades = closed.filter((t) => t.tags.some((g) => g.category === "mistake")).length;
+  const mistakeTrades = closed.filter(
+    (t) => t.tags.some((g) => g.category === "mistake") || (t.manual_flags?.length ?? 0) > 0,
+  ).length;
   const thesisHeld = closed.filter((t) => t.tags.some((g) => g.category === "thesis" && /held|continu/i.test(g.name))).length;
   const net: Record<string, number> = {};
   for (const t of closed) if (t.pnl_known) net[t.currency] = (net[t.currency] ?? 0) + Number(t.net_pnl);

@@ -150,6 +150,9 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
         if dimension in ("setup_tag", "location", "probability", "thesis", "mistake_tag"):
             cat = {"setup_tag": "setup", "mistake_tag": "mistake"}.get(dimension, dimension)
             tags = [tag.name for tag in t.tags if tag.category == cat]
+            if dimension == "mistake_tag":  # typed-in manual mistakes count too
+                tags += [f.rule_code for f in t.flags
+                         if f.source == "manual" and not f.dismissed and f.rule_code not in tags]
             return tags or ["(untagged)"]
         if dimension == "entry_quality":
             return [t.entry_quality or "(unset)"]

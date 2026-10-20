@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.core.money import q_money, q_price
 from app.core.sessions import trading_date_for
-from app.models import Attachment, Execution, Instrument, Trade
+from app.models import Attachment, Execution, Instrument, MistakeFlag, Trade
 from app.models.tag import trade_tags
 
 ZERO = Decimal("0")
@@ -233,6 +233,14 @@ def _collect_meta(db: Session, account_id: int, instrument_id: int) -> tuple[dic
         anchor = min(execs)
         meta_by_anchor[anchor] = {f: getattr(t, f) for f in _META_FIELDS}
         meta_by_anchor[anchor]["tag_ids"] = [tag.id for tag in t.tags]
+        # Manual mistake flags and dismissed auto flags are user decisions: keep
+        # them. (Other auto flags are recomputed by the mistake engine anyway.)
+        meta_by_anchor[anchor]["flags"] = [
+            {"rule_code": f.rule_code, "source": f.source, "details": f.details,
+             "dismissed": f.dismissed, "is_demo": f.is_demo}
+            for f in db.scalars(select(MistakeFlag).where(MistakeFlag.trade_id == t.id))
+            if f.source == "manual" or f.dismissed
+        ]
         att_ids = db.scalars(
             select(Attachment.id).where(Attachment.trade_id == t.id)
         ).all()
@@ -277,6 +285,11 @@ def rebuild_for(
             select(Attachment).where(Attachment.trade_id.in_(old_trade_ids))
         ):
             att.trade_id = None
+        # Delete old flags through the ORM (not the DB cascade) so the session's
+        # identity map stays consistent; the ones worth keeping were snapshotted
+        # in _collect_meta and are re-created on the rebuilt trades below.
+        for fl in db.scalars(select(MistakeFlag).where(MistakeFlag.trade_id.in_(old_trade_ids))):
+            db.delete(fl)
         for t in db.scalars(select(Trade).where(Trade.id.in_(old_trade_ids))):
             db.delete(t)
         db.flush()
@@ -350,6 +363,10 @@ def rebuild_for(
                 db.execute(
                     trade_tags.insert().values(trade_id=trade.id, tag_id=tag_id)
                 )
+        for fl in meta.get("flags") or []:
+            db.add(MistakeFlag(
+                trade_id=trade.id, account_id=account_id, session_date=trade.trading_date, **fl,
+            ))
         if anchor in attachments_by_anchor:
             for att_id in attachments_by_anchor[anchor]:
                 att = db.get(Attachment, att_id)

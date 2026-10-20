@@ -135,6 +135,8 @@ class TradeSummary(ORMModel):
     is_demo: bool
     result: str
     tags: list[TagRead] = []
+    manual_flags: list[str] = []
+    auto_flags: list[str] = []
     dtr: DecimalStr | None = None
     atr: DecimalStr | None = None
     entry_quality: str | None = None

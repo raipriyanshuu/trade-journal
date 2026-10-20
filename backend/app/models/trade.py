@@ -107,3 +107,5 @@ class Trade(Base, TimestampMixin, DemoMixin):
     instrument = relationship("Instrument", lazy="joined")
     account = relationship("Account", lazy="joined")
     attachments = relationship("Attachment", foreign_keys="Attachment.trade_id", viewonly=True)
+    # Batch-loaded so the trade list can show flags without N+1 queries.
+    flags = relationship("MistakeFlag", foreign_keys="MistakeFlag.trade_id", viewonly=True, lazy="selectin")

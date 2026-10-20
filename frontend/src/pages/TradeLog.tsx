@@ -5,7 +5,7 @@ import { useReference } from "../lib/useReference";
 import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
-import { CATEGORY_LABELS, GradeBadge, HtfBadge, ResultBadge, TagChips } from "../components/journal/Pickers";
+import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, TagChips } from "../components/journal/Pickers";
 
 type View = "journal" | "numbers";
 
@@ -237,7 +237,7 @@ export default function TradeLog() {
                   <td className="px-3 py-2"><TagChips tags={t.tags} category="thesis" /></td>
                   <td className="px-3 py-2"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
                   <td className="px-3 py-2"><TagChips tags={t.tags} category="setup" /></td>
-                  <td className="px-3 py-2"><TagChips tags={t.tags} category="mistake" /></td>
+                  <td className="px-3 py-2"><MistakeChips trade={t} /></td>
                   <td className="px-3 py-2"><GradeBadge grade={t.entry_quality} /></td>
                   <td className="px-3 py-2"><GradeBadge grade={t.exit_quality} /></td>
                   <td className="px-3 py-2"><TagChips tags={t.tags} category="location" /></td>

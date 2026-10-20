@@ -73,6 +73,9 @@ def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = Non
         "is_demo": trade.is_demo,
         "result": result_for(trade, threshold),
         "tags": [{"id": t.id, "name": t.name, "category": t.category} for t in trade.tags],
+        # Mistakes typed in the "Mistake flags" box, and the engine's live flags.
+        "manual_flags": [f.rule_code for f in trade.flags if f.source == "manual" and not f.dismissed],
+        "auto_flags": [f.rule_code for f in trade.flags if f.source == "auto" and not f.dismissed],
         # Notion-style journal fields.
         "dtr": trade.dtr,
         "atr": trade.atr,

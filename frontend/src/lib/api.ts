@@ -102,6 +102,8 @@ export interface TradeSummary {
   is_demo: boolean;
   result: string;
   tags: Tag[];
+  manual_flags: string[]; // mistakes typed in the trade's "Mistake flags" box
+  auto_flags: string[]; // live (not dismissed) mistake-engine flags
   // Notion-style journal fields
   dtr: string | null;
   atr: string | null;

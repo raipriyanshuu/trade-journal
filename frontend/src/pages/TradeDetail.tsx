@@ -12,6 +12,7 @@ import {
   localInputToUtcIso,
 } from "../lib/format";
 import Modal from "../components/Modal";
+import Lightbox from "../components/Lightbox";
 import ReplayChart from "../components/trades/ReplayChart";
 import {
   CATEGORY_LABELS, ChipPicker, GradeBadge, GradePicker, HtfBadge, HtfPicker, JOURNAL_CATEGORIES, ResultBadge, TagChips,
@@ -26,6 +27,7 @@ export default function TradeDetail() {
   const [err, setErr] = useState<string | null>(null);
   const [editDetails, setEditDetails] = useState(false);
   const [editExec, setEditExec] = useState<ExecutionRow | null>(null);
+  const [viewer, setViewer] = useState<number | null>(null); // open screenshot index
 
   const load = useCallback(() => {
     if (!id) return;
@@ -67,6 +69,7 @@ export default function TradeDetail() {
   }
 
   async function removeAttachment(attId: number) {
+    if (!confirm("Delete this screenshot? This can't be undone.")) return;
     await api.deleteAttachment(attId);
     load();
   }
@@ -186,12 +189,19 @@ export default function TradeDetail() {
             <p className="text-xs text-ink-faint mb-2">Tip: copy an image and paste (Ctrl+V) anywhere on this page.</p>
             <div className="flex flex-wrap gap-2">
               {trade.attachments.length === 0 && <span className="text-ink-faint text-sm">None yet.</span>}
-              {trade.attachments.map((a) => (
+              {trade.attachments.map((a, i) => (
                 <div key={a.id} className="relative group">
-                  <img src={`/attachments/${a.file_path}`} className="h-28 rounded-lg border border-card-border" />
+                  <img
+                    src={`/attachments/${a.file_path}`}
+                    alt={a.original_name ?? "Screenshot"}
+                    title="Click to enlarge"
+                    className="h-28 rounded-lg border border-card-border cursor-zoom-in hover:border-accent/60 transition-colors"
+                    onClick={() => setViewer(i)}
+                  />
                   <button
                     className="absolute top-1 right-1 bg-black/70 text-white rounded px-1.5 text-xs opacity-0 group-hover:opacity-100"
-                    onClick={() => removeAttachment(a.id)}
+                    title="Delete screenshot"
+                    onClick={(e) => { e.stopPropagation(); removeAttachment(a.id); }}
                   >
                     &times;
                   </button>
@@ -249,6 +259,14 @@ export default function TradeDetail() {
 
       {editDetails && (
         <TradeEditModal trade={trade} onClose={() => setEditDetails(false)} onSaved={() => { setEditDetails(false); load(); }} />
+      )}
+      {viewer !== null && trade.attachments[viewer] && (
+        <Lightbox
+          images={trade.attachments.map((a) => ({ src: `/attachments/${a.file_path}`, name: a.original_name }))}
+          index={viewer}
+          onIndex={setViewer}
+          onClose={() => setViewer(null)}
+        />
       )}
       {editExec && (
         <ExecutionEditModal exec={editExec} tz={tz} onClose={() => setEditExec(null)} onSaved={() => { setEditExec(null); load(); }} />
