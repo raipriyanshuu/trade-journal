@@ -271,6 +271,31 @@ API-key masking, demo showcase).
 
 ---
 
+## After Phase 7 — fixes and additions
+
+- **Data safety:** clearing demo data never deletes trades/journal days the user
+  logged on a demo account (that account is kept as a normal account). Automatic
+  SQLite snapshots to `data/backups/` on startup (at most every 6 h) and before
+  every migration in `start.bat` / `start.sh`; newest 20 kept. Demo accounts are
+  labelled "demo — not for real trades" in every account picker.
+- **Delayed CME charts (opt-in, Settings → Market data):** Yahoo Finance 1-minute
+  bars (5-minute for 29–59-day-old trades) for ES/MES, NQ/MNQ, GC/MGC, CL/MCL,
+  fetched automatically when a trade or missed setup is saved, when a trade page
+  has no chart, or via "fetch charts for my recent trades". Stored locally with
+  `source="yahoo"`; labelled delayed / continuous front-month on the chart.
+  NSE/MCX still use Import / Export → Bar data.
+- **"+ tag" everywhere:** every tag picker (trade type, entry location,
+  probability, what happened, mistakes, emotion, custom) and the Trade Log
+  bulk-tag bar can create a new tag inline; names match case-insensitively.
+  Merging a tag into itself is now refused (it used to delete the tag).
+- **Replay arrows at the exact fill price**, joined by a dashed trade path. Each
+  fill is checked against its minute's bar; fills the market didn't trade at the
+  logged time turn amber and a note gives the nearest time that price traded.
+- `CLAUDE.md` added: context for future Claude Code sessions.
+- **92 backend tests passing.**
+
+---
+
 ## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.
