@@ -52,6 +52,7 @@ _META_FIELDS = (
     "behaviour",
     "partial_profit",
     "outcome",
+    "style",
 )
 
 

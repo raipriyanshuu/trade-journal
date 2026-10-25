@@ -3,7 +3,8 @@ import { api, Leg, ManualTradePayload, MissedTradePayload } from "../../lib/api"
 import { useReference } from "../../lib/useReference";
 import { localInputToUtcIso } from "../../lib/format";
 import Modal from "../Modal";
-import { ChipPicker, GradePicker, HtfPicker } from "../journal/Pickers";
+import { ChipPicker, GradePicker, HtfPicker, StylePicker } from "../journal/Pickers";
+import { lastStyleFor, rememberStyle } from "../../lib/useStyles";
 
 interface Props {
   onClose: () => void;
@@ -57,6 +58,8 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState<string>("");
   const [tagIds, setTagIds] = useState<number[]>([]);
+  const [style, setStyle] = useState<string | null>(null);
+  const [styleTouched, setStyleTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -80,6 +83,16 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
   }, [instrument, entries, stop, target, plannedRisk, missed, plannedEntry, missedQty]);
 
   const atrUsed = dtr && atr && Number(atr) ? Math.round((Number(dtr) / Number(atr)) * 100) : null;
+
+  // Pre-fill the style you last used on this instrument (unless you already chose one).
+  function pickInstrument(id: number) {
+    setInstrumentId(id);
+    if (!styleTouched) setStyle(lastStyleFor(id));
+  }
+  function chooseStyle(v: string | null) {
+    setStyle(v);
+    setStyleTouched(true);
+  }
 
   function toggleTag(id: number) {
     setTagIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -119,7 +132,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
   const journal = {
     dtr: dtr || null, atr: atr || null, entry_quality: entryQ,
     exit_quality: missed ? null : exitQ, htf_alignment: htf,
-    context, behaviour, partial_profit: missed ? false : partial,
+    context, behaviour, partial_profit: missed ? false : partial, style,
   };
 
   async function submit() {
@@ -129,6 +142,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
       return;
     }
     setSaving(true);
+    rememberStyle(Number(instrumentId), style);
     try {
       if (missed) {
         const payload: MissedTradePayload = {
@@ -195,7 +209,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
           </div>
           <div>
             <label className="label">Instrument</label>
-            <select className="input" value={instrumentId} onChange={(e) => setInstrumentId(Number(e.target.value))}>
+            <select className="input" value={instrumentId} onChange={(e) => pickInstrument(Number(e.target.value))}>
               <option value="">Select&hellip;</option>
               {instruments.map((i) => <option key={i.id} value={i.id}>{i.symbol_root}</option>)}
             </select>
@@ -207,6 +221,10 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
               <button className={`btn flex-1 ${direction === "short" ? "bg-neg/20 text-neg" : "bg-card-hover text-ink-muted"}`} onClick={() => setDirection("short")}>Short</button>
             </div>
           </div>
+        </div>
+
+        <div className="mb-3">
+          <StylePicker label="Style (scalp, swing...)" value={style} onChange={chooseStyle} />
         </div>
 
         {missed ? (

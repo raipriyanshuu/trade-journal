@@ -1,3 +1,5 @@
+import { UNASSIGNED_STYLE } from "../lib/api";
+import { styleTone, useStyles } from "../lib/useStyles";
 import { useReference } from "../lib/useReference";
 
 export interface AnalyticsFilters {
@@ -6,6 +8,7 @@ export interface AnalyticsFilters {
   date_from?: string;
   date_to?: string;
   currency?: string;
+  style?: string;
   include_demo?: boolean;
 }
 
@@ -22,6 +25,7 @@ export default function AnalyticsFilterBar({
   }
   return (
     <div className="card p-3 mb-4 flex flex-wrap gap-2 items-end">
+      <StyleSwitch value={filters.style} onChange={(v) => set("style", v)} />
       <div>
         <label className="label">Account</label>
         <select className="input !w-auto" value={filters.account_id ?? ""} onChange={(e) => set("account_id", e.target.value ? Number(e.target.value) : undefined)}>
@@ -56,6 +60,32 @@ export default function AnalyticsFilterBar({
         <input type="checkbox" checked={filters.include_demo ?? true} onChange={(e) => set("include_demo", e.target.checked)} />
         Include demo
       </label>
+    </div>
+  );
+}
+
+/** Overall / Scalp / Swing / ... / Unassigned: scopes every stat on the page to one style. */
+export function StyleSwitch({ value, onChange }: { value?: string; onChange: (v: string | undefined) => void }) {
+  const { styles } = useStyles();
+  const opts: { key: string | undefined; label: string; tone: string }[] = [
+    { key: undefined, label: "Overall", tone: "bg-accent/20 text-accent-soft" },
+    ...styles.map((s) => ({ key: s, label: s, tone: styleTone(s) })),
+    { key: UNASSIGNED_STYLE, label: "Unassigned", tone: "bg-card-border text-ink-muted" },
+  ];
+  return (
+    <div className="w-full">
+      <label className="label">Style</label>
+      <div className="flex flex-wrap gap-1">
+        {opts.map((o) => {
+          const on = (value ?? undefined) === o.key;
+          return (
+            <button key={o.label} type="button" onClick={() => onChange(o.key)}
+              className={`btn !py-1 !px-3 text-xs ${on ? o.tone + " ring-1 ring-current" : "bg-card-hover text-ink-faint hover:text-ink"}`}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

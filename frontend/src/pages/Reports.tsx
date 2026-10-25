@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../lib/api";
 import { useReference } from "../lib/useReference";
+import { useStyles } from "../lib/useStyles";
+import { UNASSIGNED_STYLE } from "../lib/api";
 import Markdown from "../components/Markdown";
 
 const POS = "#22c58b";
@@ -36,6 +38,8 @@ export default function Reports() {
   const [anchor, setAnchor] = useState(isoDay(new Date()));
   const [accountId, setAccountId] = useState<number | undefined>();
   const [currency, setCurrency] = useState<string | undefined>();
+  const [style, setStyle] = useState<string | undefined>();
+  const { styles } = useStyles();
   const [rep, setRep] = useState<any>(null);
   const [ai, setAi] = useState<{ review: string; model: string; truncated: boolean } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -44,14 +48,14 @@ export default function Reports() {
   useEffect(() => {
     setAi(null);
     setAiErr(null);
-    api.report({ period, anchor, account_id: accountId, currency }).then(setRep);
-  }, [period, anchor, accountId, currency]);
+    api.report({ period, anchor, account_id: accountId, currency, style }).then(setRep);
+  }, [period, anchor, accountId, currency, style]);
 
   async function runAi() {
     setAiBusy(true);
     setAiErr(null);
     try {
-      setAi(await api.aiReview({ period, anchor, account_id: accountId, currency }));
+      setAi(await api.aiReview({ period, anchor, account_id: accountId, currency, style }));
     } catch (e) {
       setAiErr((e as Error).message.replace(/^\d+:\s*/, ""));
     } finally {
@@ -81,6 +85,11 @@ export default function Reports() {
           <select className="input !w-auto" value={currency ?? ""} onChange={(e) => setCurrency(e.target.value || undefined)}>
             <option value="">All ccy</option><option value="USD">USD</option><option value="INR">INR</option>
           </select>
+          <select className="input !w-auto" value={style ?? ""} onChange={(e) => setStyle(e.target.value || undefined)}>
+            <option value="">All styles</option>
+            {styles.map((s) => <option key={s} value={s}>{s}</option>)}
+            <option value={UNASSIGNED_STYLE}>Unassigned</option>
+          </select>
           <button className="btn-ghost" onClick={() => window.print()}>Export PDF</button>
         </div>
       </div>
@@ -89,7 +98,10 @@ export default function Reports() {
         <div className="space-y-4">
           <div>
             <div className="text-xs uppercase tracking-wider text-ink-faint">{period === "week" ? "Weekly" : "Monthly"} review</div>
-            <h2 className="text-xl font-semibold">{pretty(rep.start)} &ndash; {pretty(rep.end)}</h2>
+            <h2 className="text-xl font-semibold">
+              {pretty(rep.start)} &ndash; {pretty(rep.end)}
+              {style && <span className="text-ink-muted font-normal"> &middot; {style === UNASSIGNED_STYLE ? "unassigned" : style} trades</span>}
+            </h2>
             <p className="text-xs text-ink-faint">Compared with {pretty(rep.previous.start)} &ndash; {pretty(rep.previous.end)}{!currency && " · money figures mix currencies unless you pick one"}</p>
           </div>
 

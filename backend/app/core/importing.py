@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.styles import normalize_style
 from app.core.sessions import session_open_utc, trading_date_for
 from app.core.trade_builder import rebuild_for
 from app.models import Execution, ImportBatch, Instrument, Tag, Trade
@@ -204,7 +205,7 @@ def journal_fields(row: dict, col) -> dict:
         out["htf_alignment"] = "bearish"
     elif htf.startswith(("range", "bal", "neutral")):
         out["htf_alignment"] = "range"
-    for key in ("context", "behaviour", "notes"):
+    for key in ("context", "behaviour", "notes", "style"):
         v = str(col(row, key)).strip()
         if v:
             out[key] = v
@@ -321,6 +322,8 @@ def run_import(db: Session, *, content: bytes, config: dict) -> dict:
                 exit_ts = parse_dt(str(col(row, "exit_time")), dt_fmt, tz)
                 time_known = entry_ts is not None
                 fields = journal_fields(row, col)
+                if "style" in fields:
+                    fields["style"] = normalize_style(db, fields["style"])
                 outcome, partial = parse_outcome(str(col(row, "outcome")))
                 fields["partial_profit"] = partial
                 if outcome:

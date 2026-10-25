@@ -15,8 +15,10 @@ import Modal from "../components/Modal";
 import Lightbox from "../components/Lightbox";
 import ReplayChart from "../components/trades/ReplayChart";
 import {
-  CATEGORY_LABELS, ChipPicker, GradeBadge, GradePicker, HtfBadge, HtfPicker, JOURNAL_CATEGORIES, ResultBadge, TagChips,
+  CATEGORY_LABELS, ChipPicker, GradeBadge, GradePicker, HtfBadge, HtfPicker, JOURNAL_CATEGORIES, ResultBadge,
+  StylePicker, TagChips,
 } from "../components/journal/Pickers";
+import EditableText from "../components/EditableText";
 
 export default function TradeDetail() {
   const { id } = useParams();
@@ -72,6 +74,12 @@ export default function TradeDetail() {
     if (!confirm("Delete this screenshot? This can't be undone.")) return;
     await api.deleteAttachment(attId);
     load();
+  }
+
+  // Save one field straight from the page (inline edits), then refresh.
+  async function patch(fields: Parameters<typeof api.updateTrade>[1]) {
+    const updated = await api.updateTrade(trade!.id, fields);
+    setTrade(updated);
   }
 
   async function deleteTrade() {
@@ -216,6 +224,9 @@ export default function TradeDetail() {
           <Section title="Journal" action={
             <button className="btn-ghost text-xs" onClick={() => setEditDetails(true)}>Edit</button>
           }>
+            <div className="mb-3">
+              <StylePicker value={trade.style} onChange={(v) => patch({ style: v ?? "" })} />
+            </div>
             <dl className="text-sm space-y-1.5">
               <div className="flex justify-between items-center"><dt className="text-ink-faint">HTF</dt><dd><HtfBadge value={trade.htf_alignment} /></dd></div>
               <div className="flex justify-between items-center"><dt className="text-ink-faint">Entry / exit</dt><dd className="flex gap-1"><GradeBadge grade={trade.entry_quality} /><GradeBadge grade={trade.exit_quality} /></dd></div>
@@ -233,24 +244,19 @@ export default function TradeDetail() {
                 )
               ))}
             </div>
-            {trade.context && (
-              <div className="mt-3">
-                <div className="text-[11px] text-ink-faint">Context</div>
-                <p className="text-sm text-ink-muted whitespace-pre-wrap">{trade.context}</p>
-              </div>
-            )}
-            {trade.behaviour && (
-              <div className="mt-2">
-                <div className="text-[11px] text-ink-faint">Behaviour</div>
-                <p className="text-sm text-ink-muted whitespace-pre-wrap">{trade.behaviour}</p>
-              </div>
-            )}
+            <div className="mt-3 space-y-2">
+              <EditableText label="Context" value={trade.context} placeholder="What was the market doing? Click to add…"
+                onSave={(v) => patch({ context: v })} />
+              <EditableText label="Behaviour" value={trade.behaviour} placeholder="How did you act and feel? Click to add…"
+                onSave={(v) => patch({ behaviour: v })} />
+            </div>
           </Section>
 
           <FlagsSection tradeId={trade.id} />
 
           <Section title="Notes">
-            <p className="text-sm text-ink-muted whitespace-pre-wrap">{trade.notes || "No notes."}</p>
+            <EditableText value={trade.notes} placeholder="No notes yet. Click to add…" rows={6}
+              onSave={(v) => patch({ notes: v })} />
           </Section>
 
           <button className="btn-danger w-full" onClick={deleteTrade}>Delete trade</button>
@@ -366,6 +372,7 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
   const [context, setContext] = useState(trade.context);
   const [behaviour, setBehaviour] = useState(trade.behaviour);
   const [partial, setPartial] = useState(trade.partial_profit);
+  const [style, setStyle] = useState<string | null>(trade.style);
   const [saving, setSaving] = useState(false);
   const toggleTag = (id: number) => setTagIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
@@ -381,6 +388,7 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
         context,
         behaviour,
         partial_profit: partial,
+        style: style ?? "",
         initial_stop: stop || null,
         planned_target: target || null,
         planned_risk_amount: risk || null,
@@ -418,6 +426,7 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
         </label>
       </div>
       <div className="space-y-3 mb-4">
+        <StylePicker value={style} onChange={setStyle} />
         {JOURNAL_CATEGORIES.map((c) => <ChipPicker key={c} tags={tags} category={c} selected={tagIds} onToggle={toggleTag} />)}
         <ChipPicker tags={tags} category="emotion" selected={tagIds} onToggle={toggleTag} />
         <ChipPicker tags={tags} category="custom" selected={tagIds} onToggle={toggleTag} />

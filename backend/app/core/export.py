@@ -30,6 +30,7 @@ TRADE_COLUMNS = [
     "status", "max_position_size", "avg_entry", "avg_exit", "points", "gross_pnl",
     "fees", "net_pnl", "currency", "initial_stop", "planned_target", "planned_risk_amount",
     "r_multiple", "holding_time_seconds", "scenario", "self_rating", "pnl_only", "source",
+    "style",
 ]
 
 EXEC_COLUMNS = [
@@ -45,6 +46,7 @@ def _trade_row(db: Session, t: Trade) -> list:
         t.avg_entry, t.avg_exit, t.points, t.gross_pnl, t.fees, t.net_pnl, t.currency,
         t.initial_stop, t.planned_target, t.planned_risk_amount, t.r_multiple,
         t.holding_time_seconds, t.scenario, t.self_rating, t.pnl_only, t.source,
+        t.style,
     ]
 
 

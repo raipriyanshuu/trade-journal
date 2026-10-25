@@ -50,12 +50,13 @@ def build_report(
     account_id: int | None = None,
     currency: str | None = None,
     include_demo: bool = True,
+    style: str | None = None,
 ) -> dict:
     tz = _setting(db, "display_timezone", "Asia/Kolkata")
     big_win_r = float(_setting(db, "big_win_threshold_r", 2) or 2)
     start, end = period_bounds(period, anchor)
     pstart, pend = previous_bounds(period, start)
-    common = dict(account_id=account_id, currency=currency, include_demo=include_demo)
+    common = dict(account_id=account_id, currency=currency, include_demo=include_demo, style=style)
 
     cur = filtered_trades(db, date_from=start, date_to=end, **common)
     prev = filtered_trades(db, date_from=pstart, date_to=pend, **common)

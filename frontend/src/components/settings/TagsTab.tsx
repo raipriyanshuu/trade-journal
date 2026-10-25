@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, Tag } from "../../lib/api";
+import { styleTone, useStyles } from "../../lib/useStyles";
 
 const CATEGORIES = ["setup", "mistake", "emotion", "custom"];
 
@@ -47,6 +48,7 @@ export default function TagsTab() {
 
   return (
     <div className="space-y-5 max-w-3xl">
+      <StylesEditor />
       <div className="card p-4 flex flex-wrap items-end gap-2">
         <div>
           <label className="label">New tag</label>
@@ -112,6 +114,60 @@ export default function TagsTab() {
         </div>
         <p className="text-xs text-ink-faint mt-2">All trades on "From" move to "Into", then "From" is deleted.</p>
       </div>
+    </div>
+  );
+}
+
+/** Trade styles (Scalp / Swing / ...). Removing one here leaves trades that use it untouched. */
+function StylesEditor() {
+  const { styles, save } = useStyles();
+  const [name, setName] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  async function persist(next: string[]) {
+    setErr(null);
+    try { await save(next); } catch (e) { setErr((e as Error).message); }
+  }
+  function add() {
+    const clean = name.trim().replace(/\s+/g, " ");
+    if (!clean) return;
+    if (styles.some((s) => s.toLowerCase() === clean.toLowerCase())) { setErr(`"${clean}" already exists`); return; }
+    persist([...styles, clean]).then(() => setName(""));
+  }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= styles.length) return;
+    const next = [...styles];
+    [next[i], next[j]] = [next[j], next[i]];
+    persist(next);
+  }
+  function remove(s: string) {
+    if (!confirm(`Remove "${s}" from the style list? Trades already marked ${s} keep it.`)) return;
+    persist(styles.filter((x) => x !== s));
+  }
+
+  return (
+    <div className="card p-4">
+      <h3 className="font-medium text-sm mb-1">Trade styles</h3>
+      <p className="text-xs text-ink-faint mb-3">
+        Pick one per trade (Scalp, Swing&hellip;). The dashboard, analytics and reports can be filtered by style.
+      </p>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {styles.map((s, i) => (
+          <span key={s} className={`badge inline-flex items-center gap-1 ${styleTone(s)}`}>
+            <button className="opacity-60 hover:opacity-100" title="Move left" onClick={() => move(i, -1)}>&lsaquo;</button>
+            {s}
+            <button className="opacity-60 hover:opacity-100" title="Move right" onClick={() => move(i, 1)}>&rsaquo;</button>
+            <button className="opacity-60 hover:opacity-100 hover:text-neg ml-0.5" title="Remove" onClick={() => remove(s)}>&times;</button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input className="input !w-48" placeholder="new style, e.g. Overnight" value={name}
+          onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+        <button className="btn-ghost" onClick={add} disabled={!name.trim()}>Add style</button>
+      </div>
+      {err && <p className="text-xs text-neg mt-1">{err}</p>}
     </div>
   );
 }

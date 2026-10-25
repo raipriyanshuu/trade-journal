@@ -87,10 +87,12 @@ def mae_mfe(
     account_id: int | None = None,
     instrument_id: int | None = None,
     currency: str | None = None,
+    style: str | None = None,
     include_demo: bool = True,
 ):
     trades = filtered_trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                             instrument_id=instrument_id, currency=currency, include_demo=include_demo)
+                             instrument_id=instrument_id, currency=currency, style=style,
+                             include_demo=include_demo)
     return excursions.analytics(db, trades, adverse_r)
 
 
@@ -100,6 +102,7 @@ class ReportRequest(BaseModel):
     anchor: date
     account_id: int | None = None
     currency: str | None = None
+    style: str | None = None
     include_demo: bool = True
 
 
@@ -109,18 +112,19 @@ def report(
     period: str = "week",
     account_id: int | None = None,
     currency: str | None = None,
+    style: str | None = None,
     include_demo: bool = True,
     db: Session = Depends(get_db),
 ):
     if period not in ("week", "month"):
         raise HTTPException(422, "period must be 'week' or 'month'")
-    return build_report(db, period, anchor, account_id, currency, include_demo)
+    return build_report(db, period, anchor, account_id, currency, include_demo, style)
 
 
 @router.post("/reports/ai-review")
 def report_ai_review(payload: ReportRequest, db: Session = Depends(get_db)):
     rep = build_report(db, payload.period, payload.anchor, payload.account_id,
-                       payload.currency, payload.include_demo)
+                       payload.currency, payload.include_demo, payload.style)
     try:
         return ai_review(rep, _setting(db, "ai_review", {}))
     except AIReviewError as exc:

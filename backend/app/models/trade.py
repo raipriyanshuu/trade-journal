@@ -101,6 +101,9 @@ class Trade(Base, TimestampMixin, DemoMixin):
     pnl_known: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="1"
     )
+    # Holding style chosen by the user: Scalp / Intraday / Swing / Positional or
+    # their own (list kept in the "trade_styles" setting). None = unassigned.
+    style: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
     executions = relationship("Execution", backref="trade", foreign_keys="Execution.trade_id")
     tags = relationship("Tag", secondary="trade_tags", back_populates="trades")

@@ -111,6 +111,7 @@ export interface TradeSummary {
   exit_quality: string | null;
   htf_alignment: string | null;
   partial_profit: boolean;
+  style: string | null; // Scalp / Intraday / Swing / Positional / custom
   outcome: string | null;
   pnl_known: boolean;
   context: string;
@@ -129,6 +130,7 @@ export interface JournalFields {
   context?: string;
   behaviour?: string;
   partial_profit?: boolean;
+  style?: string | null;
 }
 
 export interface MissedTradePayload extends JournalFields {
@@ -262,10 +264,14 @@ export interface TradeFilters {
   scenario?: string;
   source?: string;
   tag_id?: number;
+  style?: string; // a style name, or UNASSIGNED_STYLE
   include_demo?: boolean;
   sort_by?: string;
   order?: string;
 }
+
+/** Style filter value meaning "trades with no style set". */
+export const UNASSIGNED_STYLE = "__none";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -355,6 +361,15 @@ export const api = {
       body: JSON.stringify({ trade_ids: tradeIds, add, remove }),
     }),
 
+  bulkStyle: (tradeIds: number[], style: string | null) =>
+    request<{ updated: number; style: string | null }>("/api/trades/bulk-style", {
+      method: "POST",
+      body: JSON.stringify({ trade_ids: tradeIds, style }),
+    }),
+  listStyles: () => request<string[]>("/api/trades/styles"),
+  setStyles: (styles: string[]) =>
+    request<string[]>("/api/trades/styles", { method: "PUT", body: JSON.stringify({ styles }) }),
+
   // Mistakes
   mistakesAnalytics: (filters: Record<string, string | number | boolean | undefined> = {}) => {
     const qs = new URLSearchParams();
@@ -426,7 +441,7 @@ export const api = {
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
     return request<any>(`/api/reports?${qs}`);
   },
-  aiReview: (body: { period: string; anchor: string; account_id?: number; currency?: string; include_demo?: boolean }) =>
+  aiReview: (body: { period: string; anchor: string; account_id?: number; currency?: string; style?: string; include_demo?: boolean }) =>
     request<{ model: string; review: string; truncated: boolean; input_tokens: number; output_tokens: number }>(
       "/api/reports/ai-review", { method: "POST", body: JSON.stringify(body) }),
   estimateCharges: (body: { instrument_id: number; direction: string; entries: { price: string; quantity: string }[]; exits: { price: string; quantity: string }[] }) =>

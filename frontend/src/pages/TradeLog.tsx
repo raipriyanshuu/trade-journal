@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, TradeFilters, TradeSummary } from "../lib/api";
+import { api, TradeFilters, TradeSummary, UNASSIGNED_STYLE } from "../lib/api";
+import { useStyles } from "../lib/useStyles";
 import { useReference } from "../lib/useReference";
 import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
-import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, TagChips } from "../components/journal/Pickers";
+import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, StyleBadge, TagChips } from "../components/journal/Pickers";
 
 type View = "journal" | "numbers";
 
@@ -36,6 +37,20 @@ export default function TradeLog() {
   const [bulkTagId, setBulkTagId] = useState<number | "" | "new">("");
   const [newTagName, setNewTagName] = useState("");
   const [newTagCat, setNewTagCat] = useState("setup");
+  const { styles } = useStyles();
+  const [bulkStyle, setBulkStyle] = useState("");
+
+  async function applyBulkStyle() {
+    if (!bulkStyle || selected.size === 0) return;
+    try {
+      await api.bulkStyle([...selected], bulkStyle === UNASSIGNED_STYLE ? null : bulkStyle);
+      setBulkStyle("");
+      setSelected(new Set());
+      load();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
 
   async function createAndApplyTag() {
     if (!newTagName.trim() || selected.size === 0) return;
@@ -121,6 +136,11 @@ export default function TradeLog() {
             <option key={i.id} value={i.id}>{i.symbol_root}</option>
           ))}
         </FilterSelect>
+        <FilterSelect label="Style" value={filters.style ?? ""} onChange={(v) => set("style", v)}>
+          <option value="">All</option>
+          {styles.map((s) => <option key={s} value={s}>{s}</option>)}
+          <option value={UNASSIGNED_STYLE}>Unassigned</option>
+        </FilterSelect>
         <FilterSelect label="Direction" value={filters.direction ?? ""} onChange={(v) => set("direction", v)}>
           <option value="">All</option>
           <option value="long">Long</option>
@@ -194,6 +214,13 @@ export default function TradeLog() {
               <button className="btn-ghost !py-1 text-xs" onClick={() => applyBulkTag("remove")}>Remove tag</button>
             </>
           )}
+          <span className="w-px h-5 bg-card-border mx-1" />
+          <select className="input !w-auto !py-1" value={bulkStyle} onChange={(e) => setBulkStyle(e.target.value)}>
+            <option value="">Set style&hellip;</option>
+            {styles.map((s) => <option key={s} value={s}>{s}</option>)}
+            <option value={UNASSIGNED_STYLE}>(clear style)</option>
+          </select>
+          <button className="btn-ghost !py-1 text-xs" onClick={applyBulkStyle} disabled={!bulkStyle}>Apply</button>
           <button className="btn-ghost !py-1 text-xs ml-auto" onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       )}
@@ -212,7 +239,7 @@ export default function TradeLog() {
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
                 <th className="px-3 py-2 w-8"></th>
-                {["Date", "Instrument", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type",
+                {["Date", "Instrument", "Style", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type",
                   "Mistakes", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
                   <th key={h} className="px-3 py-2 font-medium">{h}</th>
                 ))}
@@ -229,6 +256,7 @@ export default function TradeLog() {
                     {t.symbol}
                     {t.is_demo && <span className="badge bg-accent/15 text-accent-soft ml-1">demo</span>}
                   </td>
+                  <td className="px-3 py-2"><StyleBadge style={t.style} /></td>
                   <td className="px-3 py-2 font-mono">{t.max_position_size}</td>
                   <td className="px-3 py-2 text-ink-muted whitespace-nowrap">{t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}</td>
                   <td className="px-3 py-2 font-mono text-ink-muted">{t.dtr && t.atr ? `${Number(t.dtr)}/${Number(t.atr)}` : "—"}</td>
@@ -259,6 +287,7 @@ export default function TradeLog() {
                 <th className="px-3 py-2 font-medium">Date</th>
                 <th className="px-3 py-2 font-medium">Time</th>
                 <th className="px-3 py-2 font-medium">Symbol</th>
+                <th className="px-3 py-2 font-medium">Style</th>
                 <th className="px-3 py-2 font-medium">Dir</th>
                 <th className="px-3 py-2 font-medium text-right">Size</th>
                 <th className="px-3 py-2 font-medium text-right">Entry</th>
@@ -288,6 +317,7 @@ export default function TradeLog() {
                     {t.symbol}
                     {t.is_demo && <span className="badge bg-accent/15 text-accent-soft ml-1">demo</span>}
                   </td>
+                  <td className="px-3 py-2"><StyleBadge style={t.style} /></td>
                   <td className={`px-3 py-2 ${t.direction === "long" ? "text-pos" : "text-neg"}`}>
                     {t.direction === "long" ? "Long" : "Short"}
                   </td>

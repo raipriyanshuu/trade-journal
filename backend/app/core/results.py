@@ -83,6 +83,7 @@ def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = Non
         "exit_quality": trade.exit_quality,
         "htf_alignment": trade.htf_alignment,
         "partial_profit": trade.partial_profit,
+        "style": trade.style,
         "outcome": trade.outcome,
         "pnl_known": trade.pnl_known,
         "context": trade.context,

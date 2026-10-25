@@ -125,6 +125,8 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
         return getattr(js, field) if js else None
 
     def keys_for(t) -> list[str]:
+        if dimension == "style":
+            return [t.style or "(unassigned)"]
         if dimension == "instrument":
             return [t.instrument.symbol_root if t.instrument else "?"]
         if dimension == "account":

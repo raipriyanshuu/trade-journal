@@ -75,6 +75,11 @@ category: `setup` (shown as **"Trade type"**), `location` (entry location),
 `probability` (e.g. "65-75"), `thesis` (**"What happened"**), `mistake`,
 `emotion`, `custom`. Seeds in `app/seeds.py: TAXONOMY_SEEDS`; tag names match
 case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/Pickers.tsx: ChipPicker`).
+- **Style** (`trades.style`, nullable): Scalp/Intraday/Swing/Positional + user
+  additions, list in setting `trade_styles` (`core/styles.py`; names normalized
+  case-insensitively, new names appended). Filter param `style` on every
+  analytics endpoint; `"__none"` = unassigned (`core/filters.py: where_style`).
+  Preserved across rebuilds via `_META_FIELDS`.
 - **Missed setups:** `status="missed"`, no executions, planned entry/stop/target,
   potential R in `r_multiple`; excluded from all P&L stats.
 - **Label-only trades** (Notion rows with Win/Loss but no prices or P&L):

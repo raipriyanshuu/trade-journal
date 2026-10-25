@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, Tag } from "../../lib/api";
+import { styleTone, useStyles } from "../../lib/useStyles";
 
 // Notion-style taxonomy. "setup" is labelled "Trade type" everywhere in the UI.
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -236,5 +237,76 @@ export function ResultBadge({ result, partial }: { result: string; partial?: boo
       {partial && <span className="badge bg-sky-500/15 text-sky-300">Partial</span>}
       <span className={`badge ${tone[result] ?? ""}`}>{label[result] ?? result}</span>
     </span>
+  );
+}
+
+export function StyleBadge({ style }: { style: string | null | undefined }) {
+  if (!style) return <span className="text-ink-faint">&mdash;</span>;
+  return <span className={`badge whitespace-nowrap ${styleTone(style)}`}>{style}</span>;
+}
+
+/**
+ * Single-choice trade style (Scalp / Swing / ...) with "+ style". A new name
+ * is saved to the style list right away; clicking the selected one clears it.
+ */
+export function StylePicker({ value, onChange, label = "Style" }: {
+  value: string | null | undefined;
+  onChange: (v: string | null) => void;
+  label?: string;
+}) {
+  const { styles, save } = useStyles();
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const list = value && !styles.some((s) => s.toLowerCase() === value.toLowerCase()) ? [...styles, value] : styles;
+
+  async function add() {
+    const clean = name.trim().replace(/\s+/g, " ");
+    if (!clean) return;
+    const existing = list.find((s) => s.toLowerCase() === clean.toLowerCase());
+    if (!existing) await save([...styles, clean]).catch(() => {});
+    onChange(existing ?? clean);
+    setName("");
+    setAdding(false);
+  }
+
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {list.map((s) => {
+          const on = value?.toLowerCase() === s.toLowerCase();
+          return (
+            <button key={s} type="button" onClick={() => onChange(on ? null : s)}
+              className={`badge transition ${on ? styleTone(s) + " ring-1 ring-current" : "bg-card-hover text-ink-faint hover:text-ink"}`}>
+              {s}
+            </button>
+          );
+        })}
+        {adding ? (
+          <span className="inline-flex items-center gap-1">
+            <input
+              autoFocus
+              className="input !w-32 !py-0.5 !px-2 text-xs"
+              placeholder="new style"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); add(); }
+                if (e.key === "Escape") { setAdding(false); setName(""); }
+              }}
+            />
+            <button type="button" className="badge bg-accent/20 text-accent-soft" onClick={add} disabled={!name.trim()}>add</button>
+            <button type="button" className="text-ink-faint hover:text-ink text-xs" onClick={() => { setAdding(false); setName(""); }}>
+              &times;
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setAdding(true)}
+            className="badge border border-dashed border-card-border text-ink-faint hover:text-ink hover:border-ink-faint">
+            + style
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

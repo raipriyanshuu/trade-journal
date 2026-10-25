@@ -24,6 +24,7 @@ const ROUNDTRIP_FIELDS: [string, string][] = [
   ["pnl", "P&L"],
   ["external_id", "External ID"],
   ["outcome", "Result (Win/Loss/Missed)"],
+  ["style", "Style (Scalp/Swing...)"],
   ["dtr_atr", "DTR/ATR (46/77)"],
   ["entry_quality", "Entry quality"],
   ["exit_quality", "Exit quality"],
@@ -63,6 +64,7 @@ const NOTION_HINTS: Record<string, RegExp> = {
   htf_alignment: /^htf/i,
   context: /^context$/i,
   behaviour: /^behaviou?r$/i,
+  style: /^(style|trade ?style|horizon|timeframe)$/i,
 };
 
 const TZ = ["America/New_York", "Asia/Kolkata", "America/Chicago", "Europe/London", "UTC"];

@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFilterBar";
 
 const DIM_LABELS: Record<string, string> = {
+  style: "Style (scalp / swing...)",
   instrument: "Instrument", account: "Account", direction: "Direction",
   session_time: "Time in session", clock_time: "Clock time (IST)", weekday: "Day of week",
   setup_tag: "Trade type", location: "Entry location", probability: "Probability", thesis: "What happened",

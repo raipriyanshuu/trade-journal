@@ -41,6 +41,7 @@ class JournalFields(BaseModel):
     context: str = ""
     behaviour: str = ""
     partial_profit: bool = False
+    style: str | None = None
 
 
 class ManualTradeCreate(JournalFields):
@@ -91,6 +92,7 @@ class TradeUpdate(BaseModel):
     context: str | None = None
     behaviour: str | None = None
     partial_profit: bool | None = None
+    style: str | None = None
     outcome: str | None = None
     initial_stop: DecimalStr | None = None
     planned_target: DecimalStr | None = None
@@ -143,6 +145,7 @@ class TradeSummary(ORMModel):
     exit_quality: str | None = None
     htf_alignment: str | None = None
     partial_profit: bool = False
+    style: str | None = None
     outcome: str | None = None
     pnl_known: bool = True
     context: str = ""

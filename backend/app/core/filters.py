@@ -4,16 +4,29 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Trade
 from app.models.tag import trade_tags
 
 
+UNASSIGNED_STYLE = "__none"
+
+
+def where_style(stmt, style: str | None):
+    """Filter a Trade query by style; "__none" selects trades with no style."""
+    if not style:
+        return stmt
+    if style == UNASSIGNED_STYLE:
+        return stmt.where(Trade.style.is_(None))
+    return stmt.where(func.lower(Trade.style) == style.lower())
+
+
 def filtered_trades(
     db: Session,
     *,
+    style: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     account_id: int | None = None,
@@ -28,7 +41,7 @@ def filtered_trades(
     include_approx: bool = True,
     include_pnl_only: bool = True,
 ) -> list[Trade]:
-    stmt = select(Trade)
+    stmt = where_style(select(Trade), style)
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:

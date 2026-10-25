@@ -15,12 +15,14 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.filters import where_style
 from app.core.market_data import auto_fetch_trade
 from app.core.mistakes import recompute_for_account
 from app.core.results import breakeven_threshold, serialize_detail, serialize_summary, trade_result
+from app.core.styles import get_styles, normalize_style
 from app.core.trade_builder import rebuild_for
 from app.db import get_db
-from app.models import Account, Execution, Instrument, Trade
+from app.models import Account, Execution, Instrument, Setting, Trade
 from app.models.tag import trade_tags
 from app.schemas.trade import (
     ManualTradeCreate,
@@ -57,11 +59,12 @@ def list_trades(
     scenario: str | None = None,
     source: str | None = None,
     tag_id: int | None = None,
+    style: str | None = None,
     include_demo: bool = True,
     sort_by: str = "open_time",
     order: str = "desc",
 ):
-    stmt = select(Trade)
+    stmt = where_style(select(Trade), style)
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:
@@ -124,6 +127,48 @@ def bulk_tag(payload: BulkTagRequest, db: Session = Depends(get_db)) -> dict:
             )
     db.commit()
     return {"updated": len(payload.trade_ids)}
+
+
+class BulkStyleRequest(BaseModel):
+    trade_ids: list[int]
+    style: str | None = None  # None / "" clears the style
+
+
+@router.post("/bulk-style")
+def bulk_style(payload: BulkStyleRequest, db: Session = Depends(get_db)) -> dict:
+    style = normalize_style(db, payload.style)
+    n = 0
+    for t in db.scalars(select(Trade).where(Trade.id.in_(payload.trade_ids))):
+        t.style = style
+        n += 1
+    db.commit()
+    return {"updated": n, "style": style}
+
+
+@router.get("/styles")
+def list_styles(db: Session = Depends(get_db)) -> list[str]:
+    return get_styles(db)
+
+
+class StylesUpdate(BaseModel):
+    styles: list[str]
+
+
+@router.put("/styles")
+def set_styles(payload: StylesUpdate, db: Session = Depends(get_db)) -> list[str]:
+    """Replace the style list. Trades keep their style even if it is removed here."""
+    seen: dict[str, str] = {}
+    for raw in payload.styles:
+        name = " ".join(str(raw).split())
+        if name and name.lower() not in seen:
+            seen[name.lower()] = name
+    s = db.get(Setting, "trade_styles")
+    if s is None:
+        db.add(Setting(key="trade_styles", value=list(seen.values())))
+    else:
+        s.value = list(seen.values())
+    db.commit()
+    return get_styles(db)
 
 
 @router.get("/{trade_id}", response_model=TradeDetail)
@@ -197,7 +242,7 @@ def _apply_trade_meta(db: Session, trade: Trade, payload: ManualTradeCreate) -> 
     trade.entry_location = payload.entry_location
     trade.notes = payload.notes
     trade.self_rating = payload.self_rating
-    _apply_journal_fields(trade, payload)
+    _apply_journal_fields(db, trade, payload)
     _set_tags(db, trade, payload.tag_ids)
     db.commit()
     # Recompute R now that stop/risk are set.
@@ -206,7 +251,7 @@ def _apply_trade_meta(db: Session, trade: Trade, payload: ManualTradeCreate) -> 
     recompute_trade_r(db, trade)
 
 
-def _apply_journal_fields(trade: Trade, payload) -> None:
+def _apply_journal_fields(db: Session, trade: Trade, payload) -> None:
     trade.dtr = Decimal(payload.dtr) if payload.dtr is not None else None
     trade.atr = Decimal(payload.atr) if payload.atr is not None else None
     trade.entry_quality = payload.entry_quality
@@ -215,6 +260,7 @@ def _apply_journal_fields(trade: Trade, payload) -> None:
     trade.context = payload.context
     trade.behaviour = payload.behaviour
     trade.partial_profit = payload.partial_profit
+    trade.style = normalize_style(db, payload.style)
 
 
 @router.post("/missed", response_model=TradeDetail, status_code=201)
@@ -246,7 +292,7 @@ def create_missed(payload: MissedTradeCreate, background: BackgroundTasks, db: S
             from app.core.money import q_price
 
             trade.r_multiple = q_price(abs(trade.planned_target - trade.first_entry_price) / risk)
-    _apply_journal_fields(trade, payload)
+    _apply_journal_fields(db, trade, payload)
     db.add(trade)
     db.flush()
     _set_tags(db, trade, payload.tag_ids)
@@ -266,6 +312,8 @@ def update_trade(trade_id: int, payload: TradeUpdate, db: Session = Depends(get_
     trade = _get_trade_or_404(db, trade_id)
     data = payload.model_dump(exclude_unset=True)
     tag_ids = data.pop("tag_ids", None)
+    if "style" in data:
+        data["style"] = normalize_style(db, data["style"])
     for field, value in data.items():
         setattr(trade, field, value)
     if tag_ids is not None:

@@ -5,6 +5,7 @@ import {
 import { api } from "../lib/api";
 import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFilterBar";
 import { formatMoney, formatDuration } from "../lib/format";
+import { styleTone } from "../lib/useStyles";
 
 const POS = "#22c58b";
 const NEG = "#f0566b";
@@ -15,11 +16,18 @@ export default function Dashboard() {
   const [filters, setFilters] = useState<AnalyticsFilters>({ include_demo: true });
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [byStyle, setByStyle] = useState<StyleRow[]>([]);
 
   useEffect(() => {
     setLoading(true);
     api.dashboard(filters as any).then(setData).finally(() => setLoading(false));
   }, [JSON.stringify(filters)]);
+
+  // Side-by-side style comparison ignores the style filter itself.
+  const { style: _style, ...rest } = filters;
+  useEffect(() => {
+    api.breakdown("style", rest as any).then(setByStyle).catch(() => setByStyle([]));
+  }, [JSON.stringify(rest)]);
 
   const k = data?.kpis;
   const ccy = filters.currency ?? (k && Object.keys(k.net_by_ccy ?? {})[0]) ?? "USD";
@@ -33,6 +41,11 @@ export default function Dashboard() {
         <p className="text-ink-muted text-sm">Loading&hellip;</p>
       ) : (
         <>
+          {filters.style && (
+            <p className="text-xs text-ink-muted mb-2">
+              Showing <span className="font-medium text-ink">{filters.style === "__none" ? "unassigned" : filters.style}</span> trades only.
+            </p>
+          )}
           {/* KPI grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-5">
             <Kpi label="Net P&L" value={netStr(k.net_by_ccy)} big />
@@ -52,6 +65,11 @@ export default function Dashboard() {
             <Kpi label="Hold (win)" value={formatDuration(k.avg_hold_winner ? Math.round(k.avg_hold_winner) : null)} />
             <Kpi label="Hold (loss)" value={formatDuration(k.avg_hold_loser ? Math.round(k.avg_hold_loser) : null)} />
           </div>
+
+          {byStyle.length > 0 && (
+            <StyleComparison rows={byStyle} ccy={ccy} active={filters.style}
+              onPick={(s) => setFilters({ ...filters, style: s })} />
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card title="Cumulative P&L">
@@ -139,6 +157,61 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
     <div className="card p-4">
       <h3 className="font-medium text-sm mb-3">{title}</h3>
       {children}
+    </div>
+  );
+}
+
+type StyleRow = { key: string; trades: number; win_rate: number; net_pnl: string; avg_pnl: number; profit_factor: number | null; expectancy_r: number | null };
+
+/** Scalp vs Swing vs ... in one table; click a row to scope the dashboard to it. */
+function StyleComparison({ rows, ccy, active, onPick }: {
+  rows: StyleRow[]; ccy: string; active?: string; onPick: (s: string | undefined) => void;
+}) {
+  const keyOf = (r: StyleRow) => (r.key === "(unassigned)" ? "__none" : r.key);
+  return (
+    <div className="card p-4 mb-4">
+      <div className="flex items-baseline justify-between mb-2">
+        <h3 className="font-medium text-sm">By style</h3>
+        <span className="text-xs text-ink-faint">Click a row to filter the dashboard</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-ink-faint">
+            <tr className="text-left">
+              <th className="py-1.5 pr-3 font-normal">Style</th>
+              <th className="py-1.5 pr-3 font-normal text-right">Trades</th>
+              <th className="py-1.5 pr-3 font-normal text-right">Win rate</th>
+              <th className="py-1.5 pr-3 font-normal text-right">Profit factor</th>
+              <th className="py-1.5 pr-3 font-normal text-right">Net P&amp;L</th>
+              <th className="py-1.5 pr-3 font-normal text-right">Avg / trade</th>
+              <th className="py-1.5 font-normal text-right">Exp. R</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const k = keyOf(r);
+              const on = active === k;
+              const net = Number(r.net_pnl);
+              return (
+                <tr key={r.key} onClick={() => onPick(on ? undefined : k)}
+                  className={`border-t border-card-border cursor-pointer hover:bg-card-hover ${on ? "bg-card-hover" : ""}`}>
+                  <td className="py-1.5 pr-3">
+                    <span className={`badge ${r.key === "(unassigned)" ? "bg-card-border text-ink-muted" : styleTone(r.key)}`}>
+                      {r.key === "(unassigned)" ? "Unassigned" : r.key}
+                    </span>
+                  </td>
+                  <td className="py-1.5 pr-3 text-right font-mono">{r.trades}</td>
+                  <td className="py-1.5 pr-3 text-right font-mono">{Math.round(r.win_rate * 100)}%</td>
+                  <td className="py-1.5 pr-3 text-right font-mono">{r.profit_factor ?? "∞"}</td>
+                  <td className={`py-1.5 pr-3 text-right font-mono ${net >= 0 ? "text-pos" : "text-neg"}`}>{formatMoney(r.net_pnl, ccy)}</td>
+                  <td className="py-1.5 pr-3 text-right font-mono">{formatMoney(r.avg_pnl, ccy)}</td>
+                  <td className="py-1.5 text-right font-mono">{r.expectancy_r ?? "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

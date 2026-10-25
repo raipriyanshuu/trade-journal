@@ -6,7 +6,7 @@ import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, localInputToUtcIso, pnlColor, utcIsoToLocalInput } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
 import {
-  GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, TagChips,
+  GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, StyleBadge, TagChips,
 } from "../components/journal/Pickers";
 
 type Step = "plan" | "execute" | "review";
@@ -368,7 +368,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
-            {["Instrument", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type", "Mistakes", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
+            {["Instrument", "Style", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type", "Mistakes", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
               <th key={h} className="px-3 py-2 font-medium">{h}</th>
             ))}
           </tr>
@@ -377,6 +377,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
           {trades.map((t) => (
             <tr key={t.id} className="border-b border-card-border/40 hover:bg-card-hover cursor-pointer align-top" onClick={() => onOpen(t.id)}>
               <td className="px-3 py-2 font-mono font-semibold">{t.symbol}</td>
+              <td className="px-3 py-2"><StyleBadge style={t.style} /></td>
               <td className="px-3 py-2 font-mono">{t.max_position_size}</td>
               <td className="px-3 py-2 text-ink-muted whitespace-nowrap">{t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}</td>
               <td className="px-3 py-2 font-mono text-ink-muted">{t.dtr && t.atr ? `${Number(t.dtr)}/${Number(t.atr)}` : "—"}</td>

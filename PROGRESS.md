@@ -292,7 +292,16 @@ API-key masking, demo showcase).
   fill is checked against its minute's bar; fills the market didn't trade at the
   logged time turn amber and a note gives the nearest time that price traded.
 - `CLAUDE.md` added: context for future Claude Code sessions.
-- **92 backend tests passing.**
+- **Trade style (Scalp / Intraday / Swing / Positional + your own):** picked on
+  every trade and missed setup (remembers the last style per instrument), editable
+  on the trade page, bulk "Set style" in the Trade Log, a Style column, Notion
+  import column and CSV/xlsx export. Every analytics page (Dashboard, Breakdowns,
+  Calendar, Mistakes, MAE/MFE) has an Overall / per-style / Unassigned switch;
+  the Dashboard adds a "By style" comparison table; Reports has a style filter;
+  Breakdowns has a Style dimension. Style list editable in Settings → Tags.
+- **Inline editing** of Context, Behaviour and Notes on the trade page (click the
+  text or Edit; Ctrl+Enter saves, Esc cancels).
+- **103 backend tests passing.**
 
 ---
 

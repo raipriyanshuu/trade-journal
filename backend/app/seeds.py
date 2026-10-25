@@ -106,6 +106,7 @@ INSTRUMENT_SEEDS = [
 
 DEFAULT_SETTINGS = {
     "display_timezone": "Asia/Kolkata",
+    "trade_styles": ["Scalp", "Intraday", "Swing", "Positional"],
     "usd_inr_rate": "88.0",
     "breakeven_threshold": {"USD": "1", "INR": "50"},
     "big_win_threshold_r": 2,
