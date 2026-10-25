@@ -66,12 +66,16 @@ def _snap(value: float, tick: Decimal) -> Decimal:
     return d
 
 
-def fetch_yahoo(symbol: str, start: datetime, end: datetime, interval: str) -> list[dict]:
-    """Raw bars from Yahoo's chart endpoint (network call). Times are UTC."""
+def fetch_yahoo(symbol: str, start: datetime, end: datetime, interval: str,
+                span: timedelta = MAX_REQUEST_SPAN) -> list[dict]:
+    """Raw bars from Yahoo's chart endpoint (network call). Times are UTC.
+
+    The range is requested in ``span``-sized chunks (Yahoo caps 1m requests at ~8 days).
+    """
     out: list[dict] = []
     cursor = start
     while cursor < end:
-        chunk_end = min(end, cursor + MAX_REQUEST_SPAN)
+        chunk_end = min(end, cursor + span)
         try:
             r = httpx.get(
                 CHART_URL.format(symbol=symbol),

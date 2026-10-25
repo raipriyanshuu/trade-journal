@@ -98,6 +98,17 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   calendar, breakdown dimensions), `importing` (CSV/Notion wizard backend),
   `export`, `bars`, `excursions` (MAE/MFE), `replay`, `reports`, `charges` (NSE/MCX),
   `market_data` (Yahoo), `autobackup`.
+- **Backtest (bar replay), fully separate:** `backend/app/backtest/` with its own
+  SQLite file `data/backtest.db` (own `BtBase`, tables via `create_all` in
+  `init_db()`; NOT Alembic: add columns with an explicit ALTER in `init_db`).
+  `candles.py` = CME trading day (18:00 NY), timeframe buckets, base selection
+  (5m ~60d / 1h ~2y / 1d since 2000 from Yahoo via `data.py`), no-look-ahead
+  candles, session VWAP + bands; `engine.py` = fills (market at last close, gap
+  fills at open, stop first if a bar hits both), partials, R, MAE/MFE; `stats.py`;
+  `api.py` under `/api/backtest` (every action returns the same `state`).
+  Frontend: `pages/Backtest.tsx`, `components/backtest/*`, `lib/backtestApi.ts`.
+  Never let journal code read backtest tables or vice versa. Tests:
+  `tests/test_backtest.py`. Autobackup also snapshots backtest.db (`backtest-*.db`).
 - `frontend/src/lib/api.ts` = every API call + types (add new endpoints here);
   `lib/format.ts` money/time helpers; `lib/useReference.ts` accounts/instruments/tags;
   `components/AnalyticsFilterBar.tsx` shared filters; `components/journal/Pickers.tsx`

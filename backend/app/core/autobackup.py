@@ -24,27 +24,29 @@ def backups_dir() -> Path:
     return settings.data_dir / "backups"
 
 
-def snapshot(reason: str = "manual", min_interval_hours: float = 0, keep: int = KEEP) -> Path | None:
-    db = settings.db_path
+def snapshot(reason: str = "manual", min_interval_hours: float = 0, keep: int = KEEP,
+             db: Path | None = None, prefix: str = "journal") -> Path | None:
+    """Snapshot ``db`` (the journal by default) as ``<prefix>-<stamp>-<reason>.db``."""
+    db = db or settings.db_path
     if not db.exists() or db.stat().st_size == 0:
         return None
     bdir = backups_dir()
     bdir.mkdir(parents=True, exist_ok=True)
-    existing = sorted(bdir.glob("journal-*.db"))
+    existing = sorted(bdir.glob(f"{prefix}-*.db"))
     if min_interval_hours and existing:
         age_h = (time.time() - existing[-1].stat().st_mtime) / 3600
         if age_h < min_interval_hours:
             return None
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    dest = bdir / f"journal-{stamp}-{reason}.db"
+    dest = bdir / f"{prefix}-{stamp}-{reason}.db"
     con = sqlite3.connect(str(db))
     try:
         con.execute("VACUUM INTO ?", (str(dest),))
     finally:
         con.close()
 
-    for old in sorted(bdir.glob("journal-*.db"))[:-keep]:
+    for old in sorted(bdir.glob(f"{prefix}-*.db"))[:-keep]:
         try:
             old.unlink()
         except OSError:

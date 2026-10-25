@@ -305,6 +305,31 @@ API-key masking, demo showcase).
 
 ---
 
+## Backtest engine (bar replay) ✅
+
+New **Backtest** page (sidebar → Practice), completely separate from the journal:
+its own database file `data/backtest.db`, its own candle store and API.
+
+- **Data:** "Market data" loads free Yahoo history for ES, NQ, Gold (GC) and
+  Crude (CL): 5-minute ~60 days, hourly ~2 years, daily back to 2000. Updates
+  append, so stored 5-minute history keeps growing.
+- **Replay chart** (TradingView Lightweight Charts): 5m, 15m, 30m, 1h, 4h, 1D, 1W
+  built from the finest data available; candles form live without look-ahead.
+  Next bar (→), next candle (Shift+→), Play (Space) by bar or by candle at
+  1–8 steps/second, jump to any date. Session VWAP with ±1σ/±2σ bands, volume.
+- **Trading:** Long/Short ticket with stop/target (auto-suggested, typed or
+  dragged on the chart), size by $ risk or contracts, full or micro contracts,
+  fees per contract. Stops/targets fill automatically (gaps at the open; stop
+  first if both are hit in one bar); close all / half, stop to breakeven.
+  A chart snapshot is saved at every exit.
+- **Sessions** = strategy + instrument + start date + balance + risk.
+- **Dashboard tab:** net, return, win rate, profit factor, expectancy ($ and R),
+  drawdown, streaks, equity curve, R distribution, and breakdowns by strategy,
+  setup, instrument, direction, exit type, weekday and hour.
+- **119 backend tests passing.**
+
+---
+
 ## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.

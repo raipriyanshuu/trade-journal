@@ -16,6 +16,8 @@ from app.api import mistakes as mistakes_api
 from app.api import importing as import_api
 from app.api import review as review_api
 from app.api import settings as settings_api
+from app.backtest import api as backtest_api
+from app.backtest.db import init_db as init_backtest_db
 from app.config import settings
 from app.db import SessionLocal
 from app.seeds import seed_all
@@ -29,8 +31,13 @@ async def lifespan(_app: FastAPI):
 
     try:
         snapshot("startup", min_interval_hours=6)
+        from app.backtest.db import backtest_db_path
+
+        snapshot("startup", min_interval_hours=6, db=backtest_db_path(), prefix="backtest")
     except Exception as exc:  # noqa: BLE001 - a failed backup must not block the app
         print(f"[backup] startup snapshot failed: {exc}")
+    # Backtest store: its own file, data/backtest.db (tables created if missing).
+    init_backtest_db()
     # Seed instrument master, default settings and mistake tags if missing.
     with SessionLocal() as db:
         seed_all(db)
@@ -66,6 +73,7 @@ app.include_router(attachments.router)
 app.include_router(import_api.router)
 app.include_router(export_api.router)
 app.include_router(review_api.router)
+app.include_router(backtest_api.router)
 
 # Serve uploaded screenshots.
 settings.ensure_dirs()

@@ -33,6 +33,12 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: "Practice",
+    items: [
+      { to: "/backtest", label: "Backtest", icon: "⟲" },
+    ],
+  },
+  {
     title: "Data",
     items: [
       { to: "/data", label: "Import / Export", icon: "⤓" },
