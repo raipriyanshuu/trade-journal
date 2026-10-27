@@ -87,3 +87,24 @@ def test_bulk_tag(client):
     assert r.json()["updated"] == 1
     detail = client.get(f"/api/trades/{t1['id']}").json()
     assert any(tg["name"] == "A+" for tg in detail["tags"])
+
+
+def test_breakdown_by_emotion_tag(client):
+    acc = client.post("/api/accounts", json={"name": "Emo", "currency": "USD"}).json()
+    es = next(i for i in client.get("/api/instruments").json() if i["symbol_root"] == "ES")
+    calm = client.post("/api/tags", json={"name": "Calm", "category": "emotion"}).json()
+    client.post("/api/trades/manual", json={
+        "account_id": acc["id"], "instrument_id": es["id"], "direction": "long", "tag_ids": [calm["id"]],
+        "entries": [{"time": "2026-10-20T14:00:00Z", "price": "6000", "quantity": "1"}],
+        "exits": [{"time": "2026-10-20T14:10:00Z", "price": "6004", "quantity": "1"}],
+    })
+    client.post("/api/trades/manual", json={
+        "account_id": acc["id"], "instrument_id": es["id"], "direction": "long",
+        "entries": [{"time": "2026-10-21T14:00:00Z", "price": "6000", "quantity": "1"}],
+        "exits": [{"time": "2026-10-21T14:10:00Z", "price": "5996", "quantity": "1"}],
+    })
+    assert "emotion_tag" in client.get("/api/analytics/dimensions").json()
+    rows = {r["key"]: r for r in client.get(
+        "/api/analytics/breakdown", params={"dimension": "emotion_tag", "account_id": acc["id"]}).json()}
+    assert set(rows) == {"Calm", "(untagged)"}
+    assert rows["Calm"]["win_rate"] == 1.0 and rows["(untagged)"]["trades"] == 1

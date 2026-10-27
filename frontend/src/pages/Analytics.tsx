@@ -9,7 +9,7 @@ const DIM_LABELS: Record<string, string> = {
   session_time: "Time in session", clock_time: "Clock time (IST)", weekday: "Day of week",
   setup_tag: "Trade type", location: "Entry location", probability: "Probability", thesis: "What happened",
   entry_quality: "Entry quality", exit_quality: "Exit quality", htf_alignment: "HTF alignment",
-  with_htf: "With vs against HTF", atr_used: "ATR used at entry", mistake_tag: "Mistake tag",
+  with_htf: "With vs against HTF", atr_used: "ATR used at entry", mistake_tag: "Mistake tag", emotion_tag: "Emotion",
   scenario: "Scenario", planned: "Planned vs unplanned",
   checklist_score: "Checklist score", vwap: "VWAP relation", entry_location: "Level type (legacy)",
   day_type: "Day type", opening_type: "Opening type", holding_bucket: "Holding time",

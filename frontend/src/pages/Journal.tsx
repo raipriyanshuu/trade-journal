@@ -368,7 +368,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
-            {["Instrument", "Style", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type", "Mistakes", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
+            {["Instrument", "Style", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type", "Mistakes", "Emotion", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
               <th key={h} className="px-3 py-2 font-medium">{h}</th>
             ))}
           </tr>
@@ -387,6 +387,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
               <td className="px-3 py-2"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
               <td className="px-3 py-2"><TagChips tags={t.tags} category="setup" /></td>
               <td className="px-3 py-2"><MistakeChips trade={t} /></td>
+              <td className="px-3 py-2"><TagChips tags={t.tags} category="emotion" /></td>
               <td className="px-3 py-2"><GradeBadge grade={t.entry_quality} /></td>
               <td className="px-3 py-2"><GradeBadge grade={t.exit_quality} /></td>
               <td className="px-3 py-2"><TagChips tags={t.tags} category="location" /></td>

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 DIMENSIONS = [
     "style", "setup_tag", "location", "probability", "thesis", "entry_quality", "exit_quality",
-    "htf_alignment", "with_htf", "atr_used", "mistake_tag",
+    "htf_alignment", "with_htf", "atr_used", "mistake_tag", "emotion_tag",
     "instrument", "account", "direction", "session_time", "clock_time", "weekday",
     "scenario", "planned", "checklist_score", "vwap", "entry_location",
     "day_type", "opening_type", "holding_bucket", "position_size",

@@ -149,8 +149,8 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
             return [_holding_bucket(t.holding_time_seconds)]
         if dimension == "position_size":
             return [str(t.max_position_size)]
-        if dimension in ("setup_tag", "location", "probability", "thesis", "mistake_tag"):
-            cat = {"setup_tag": "setup", "mistake_tag": "mistake"}.get(dimension, dimension)
+        if dimension in ("setup_tag", "location", "probability", "thesis", "mistake_tag", "emotion_tag"):
+            cat = {"setup_tag": "setup", "mistake_tag": "mistake", "emotion_tag": "emotion"}.get(dimension, dimension)
             tags = [tag.name for tag in t.tags if tag.category == cat]
             if dimension == "mistake_tag":  # typed-in manual mistakes count too
                 tags += [f.rule_code for f in t.flags

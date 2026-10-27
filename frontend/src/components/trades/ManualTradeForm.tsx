@@ -340,6 +340,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
         <div className="space-y-3">
           <ChipPicker tags={tags} category="thesis" selected={tagIds} onToggle={toggleTag} />
           <ChipPicker tags={tags} category="mistake" selected={tagIds} onToggle={toggleTag} />
+          <ChipPicker tags={tags} category="emotion" selected={tagIds} onToggle={toggleTag} />
           {!missed && (
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={partial} onChange={(e) => setPartial(e.target.checked)} />

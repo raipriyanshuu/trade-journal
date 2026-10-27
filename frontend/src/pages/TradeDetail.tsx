@@ -235,7 +235,7 @@ export default function TradeDetail() {
               <Row k="Planned" v={trade.planned === null ? "—" : trade.planned ? "yes" : "no"} />
             </dl>
             <div className="space-y-2 mt-3">
-              {JOURNAL_CATEGORIES.map((c) => (
+              {[...JOURNAL_CATEGORIES, "emotion"].map((c) => (
                 trade.tags.some((t) => t.category === c) && (
                   <div key={c}>
                     <div className="text-[11px] text-ink-faint mb-0.5">{CATEGORY_LABELS[c]}</div>
