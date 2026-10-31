@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "../lib/theme";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../lib/api";
 import { useReference } from "../lib/useReference";
@@ -6,8 +7,6 @@ import { useStyles } from "../lib/useStyles";
 import { UNASSIGNED_STYLE } from "../lib/api";
 import Markdown from "../components/Markdown";
 
-const POS = "#22c58b";
-const NEG = "#f0566b";
 
 function isoDay(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,6 +32,8 @@ const COMPARE_ROWS: [string, string, (v: any) => string, boolean][] = [
 ];
 
 export default function Reports() {
+  const { c } = useTheme();
+  const POS = c.pos, NEG = c.neg;
   const { accounts } = useReference();
   const [period, setPeriod] = useState<"week" | "month">("week");
   const [anchor, setAnchor] = useState(isoDay(new Date()));
@@ -149,10 +150,10 @@ export default function Reports() {
               {rep.daily_pnl.length === 0 ? <p className="text-ink-faint text-sm">No closed trades.</p> : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={rep.daily_pnl}>
-                    <CartesianGrid stroke="#232b3b" strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fill: "#6b7688", fontSize: 10 }} />
-                    <YAxis tick={{ fill: "#6b7688", fontSize: 10 }} width={52} />
-                    <Tooltip contentStyle={{ background: "#141a27", border: "1px solid #232b3b", fontSize: 12 }} />
+                    <CartesianGrid stroke={c.border} strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fill: c.faint, fontSize: 10 }} />
+                    <YAxis tick={{ fill: c.faint, fontSize: 10 }} width={52} />
+                    <Tooltip contentStyle={c.tooltip} />
                     <Bar dataKey="net" radius={[3, 3, 0, 0]} isAnimationActive={false}>
                       {rep.daily_pnl.map((d: any, i: number) => <Cell key={i} fill={d.net >= 0 ? POS : NEG} />)}
                     </Bar>

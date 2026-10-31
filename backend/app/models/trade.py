@@ -104,6 +104,11 @@ class Trade(Base, TimestampMixin, DemoMixin):
     # Holding style chosen by the user: Scalp / Intraday / Swing / Positional or
     # their own (list kept in the "trade_styles" setting). None = unassigned.
     style: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    # Playbook (strategy) this trade belongs to; the rules followed are in
+    # trade_rule_checks. Deleting a playbook leaves its trades unassigned.
+    playbook_id: Mapped[int | None] = mapped_column(
+        ForeignKey("playbooks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     executions = relationship("Execution", backref="trade", foreign_keys="Execution.trade_id")
     tags = relationship("Tag", secondary="trade_tags", back_populates="trades")
@@ -112,3 +117,5 @@ class Trade(Base, TimestampMixin, DemoMixin):
     attachments = relationship("Attachment", foreign_keys="Attachment.trade_id", viewonly=True)
     # Batch-loaded so the trade list can show flags without N+1 queries.
     flags = relationship("MistakeFlag", foreign_keys="MistakeFlag.trade_id", viewonly=True, lazy="selectin")
+    playbook = relationship("Playbook", lazy="selectin")
+    checked_rules = relationship("PlaybookRule", secondary="trade_rule_checks", viewonly=True, lazy="selectin")

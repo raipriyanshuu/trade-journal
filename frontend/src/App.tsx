@@ -13,6 +13,8 @@ import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import Excursions from "./pages/Excursions";
 import Backtest from "./pages/Backtest";
+import Playbooks from "./pages/Playbooks";
+import PlaybookDetail from "./pages/PlaybookDetail";
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="excursions" element={<Excursions />} />
         <Route path="backtest" element={<Backtest />} />
+        <Route path="playbooks" element={<Playbooks />} />
+        <Route path="playbooks/:id" element={<PlaybookDetail />} />
         <Route path="data" element={<Data />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />

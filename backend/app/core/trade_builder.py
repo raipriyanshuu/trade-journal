@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.core.money import q_money, q_price
 from app.core.sessions import trading_date_for
 from app.models import Attachment, Execution, Instrument, MistakeFlag, Trade
+from app.models.playbook import trade_rule_checks
 from app.models.tag import trade_tags
 
 ZERO = Decimal("0")
@@ -53,6 +54,7 @@ _META_FIELDS = (
     "partial_profit",
     "outcome",
     "style",
+    "playbook_id",
 )
 
 
@@ -234,6 +236,7 @@ def _collect_meta(db: Session, account_id: int, instrument_id: int) -> tuple[dic
         anchor = min(execs)
         meta_by_anchor[anchor] = {f: getattr(t, f) for f in _META_FIELDS}
         meta_by_anchor[anchor]["tag_ids"] = [tag.id for tag in t.tags]
+        meta_by_anchor[anchor]["rule_ids"] = [r.id for r in t.checked_rules]
         # Manual mistake flags and dismissed auto flags are user decisions: keep
         # them. (Other auto flags are recomputed by the mistake engine anyway.)
         meta_by_anchor[anchor]["flags"] = [
@@ -364,6 +367,8 @@ def rebuild_for(
                 db.execute(
                     trade_tags.insert().values(trade_id=trade.id, tag_id=tag_id)
                 )
+        for rule_id in meta.get("rule_ids") or []:
+            db.execute(trade_rule_checks.insert().values(trade_id=trade.id, rule_id=rule_id))
         for fl in meta.get("flags") or []:
             db.add(MistakeFlag(
                 trade_id=trade.id, account_id=account_id, session_date=trade.trading_date, **fl,

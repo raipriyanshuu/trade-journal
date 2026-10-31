@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "../lib/theme";
 import { useNavigate } from "react-router-dom";
 import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -6,12 +7,10 @@ import {
 import { api, TradeSummary } from "../lib/api";
 import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFilterBar";
 
-const NEG = "#f0566b";
-const POS = "#22c58b";
-const ACCENT = "#6d6bf6";
-const GRID = "#232b3b";
 
 export default function Mistakes() {
+  const { c } = useTheme();
+  const NEG = c.neg, POS = c.pos, ACCENT = c.accent, GRID = c.border;
   const nav = useNavigate();
   const [filters, setFilters] = useState<AnalyticsFilters>({ include_demo: true });
   const [data, setData] = useState<any>(null);
@@ -119,9 +118,9 @@ export default function Mistakes() {
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={data.equity_overlay}>
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-              <XAxis dataKey="date" tick={{ fill: "#6b7688", fontSize: 10 }} hide />
-              <YAxis tick={{ fill: "#6b7688", fontSize: 10 }} width={48} />
-              <Tooltip contentStyle={{ background: "#141a27", border: "1px solid #232b3b", fontSize: 12 }} />
+              <XAxis dataKey="date" tick={{ fill: c.faint, fontSize: 10 }} hide />
+              <YAxis tick={{ fill: c.faint, fontSize: 10 }} width={48} />
+              <Tooltip contentStyle={c.tooltip} />
               <Line type="monotone" dataKey="actual" stroke={ACCENT} dot={false} strokeWidth={2} />
               <Line type="monotone" dataKey="without_mistakes" stroke={POS} dot={false} strokeWidth={2} strokeDasharray="4 2" />
             </LineChart>
@@ -173,9 +172,9 @@ export default function Mistakes() {
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.trends}>
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-              <XAxis dataKey="week" tick={{ fill: "#6b7688", fontSize: 10 }} />
-              <YAxis tick={{ fill: "#6b7688", fontSize: 10 }} width={40} />
-              <Tooltip contentStyle={{ background: "#141a27", border: "1px solid #232b3b", fontSize: 12 }} />
+              <XAxis dataKey="week" tick={{ fill: c.faint, fontSize: 10 }} />
+              <YAxis tick={{ fill: c.faint, fontSize: 10 }} width={40} />
+              <Tooltip contentStyle={c.tooltip} />
               <Bar dataKey="count" fill={NEG} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -223,6 +222,8 @@ function CmpRow({ k, clean, mistake }: { k: string; clean: React.ReactNode; mist
   );
 }
 function RateChart({ title, rows }: { title: string; rows: any[] }) {
+  const { c } = useTheme();
+  const GRID = c.border, NEG = c.neg;
   const data = rows.map((r) => ({ bucket: r.bucket, rate: Math.round(r.rate * 100), trades: r.trades }));
   return (
     <Section title={title}>
@@ -230,9 +231,9 @@ function RateChart({ title, rows }: { title: string; rows: any[] }) {
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={data}>
             <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-            <XAxis dataKey="bucket" tick={{ fill: "#6b7688", fontSize: 10 }} />
-            <YAxis tick={{ fill: "#6b7688", fontSize: 10 }} width={32} unit="%" />
-            <Tooltip contentStyle={{ background: "#141a27", border: "1px solid #232b3b", fontSize: 12 }} />
+            <XAxis dataKey="bucket" tick={{ fill: c.faint, fontSize: 10 }} />
+            <YAxis tick={{ fill: c.faint, fontSize: 10 }} width={32} unit="%" />
+            <Tooltip contentStyle={c.tooltip} />
             <Bar dataKey="rate" fill={NEG} radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

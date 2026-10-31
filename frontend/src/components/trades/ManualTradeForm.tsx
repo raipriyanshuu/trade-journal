@@ -5,6 +5,7 @@ import { localInputToUtcIso } from "../../lib/format";
 import Modal from "../Modal";
 import { ChipPicker, GradePicker, HtfPicker, StylePicker } from "../journal/Pickers";
 import { lastStyleFor, rememberStyle } from "../../lib/useStyles";
+import { PlaybookPicker, usePlaybooks } from "../playbooks/shared";
 
 interface Props {
   onClose: () => void;
@@ -59,6 +60,9 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
   const [rating, setRating] = useState<string>("");
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [style, setStyle] = useState<string | null>(null);
+  const { playbooks } = usePlaybooks();
+  const [playbookId, setPlaybookId] = useState<number | null>(null);
+  const [ruleIds, setRuleIds] = useState<number[]>([]);
   const [styleTouched, setStyleTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -133,6 +137,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
     dtr: dtr || null, atr: atr || null, entry_quality: entryQ,
     exit_quality: missed ? null : exitQ, htf_alignment: htf,
     context, behaviour, partial_profit: missed ? false : partial, style,
+    playbook_id: playbookId, rule_ids: playbookId ? ruleIds : [],
   };
 
   async function submit() {
@@ -281,6 +286,11 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
 
       {/* 2. Context */}
       <Section n={2} title="Context (before the trade)">
+        <div className="mb-3 rounded-lg border border-card-border p-3">
+          <label className="label">Playbook {playbooks.filter((p) => !p.archived).length === 0 && <span className="text-ink-faint font-normal">&middot; create one on the Playbooks page</span>}</label>
+          <PlaybookPicker playbooks={playbooks} playbookId={playbookId} checked={ruleIds}
+            onChange={(id, ids) => { setPlaybookId(id); setRuleIds(ids); }} />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <HtfPicker value={htf} onChange={setHtf} />
           <div>

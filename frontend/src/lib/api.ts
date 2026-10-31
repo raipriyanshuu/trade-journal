@@ -112,6 +112,9 @@ export interface TradeSummary {
   htf_alignment: string | null;
   partial_profit: boolean;
   style: string | null; // Scalp / Intraday / Swing / Positional / custom
+  playbook: { id: number; name: string; color: string } | null;
+  rules_followed: number | null;
+  rules_total: number | null;
   outcome: string | null;
   pnl_known: boolean;
   context: string;
@@ -131,6 +134,8 @@ export interface JournalFields {
   behaviour?: string;
   partial_profit?: boolean;
   style?: string | null;
+  playbook_id?: number | null;
+  rule_ids?: number[];
 }
 
 export interface MissedTradePayload extends JournalFields {
@@ -185,6 +190,7 @@ export interface TradeDetail extends TradeSummary {
   vwap_relation: string;
   entry_location: string;
   notes: string;
+  checked_rule_ids: number[];
   executions: ExecutionRow[];
   attachments: AttachmentRow[];
 }
@@ -265,6 +271,7 @@ export interface TradeFilters {
   source?: string;
   tag_id?: number;
   style?: string; // a style name, or UNASSIGNED_STYLE
+  playbook?: string; // playbook id, or "none"
   include_demo?: boolean;
   sort_by?: string;
   order?: string;
@@ -272,6 +279,58 @@ export interface TradeFilters {
 
 /** Style filter value meaning "trades with no style set". */
 export const UNASSIGNED_STYLE = "__none";
+
+export interface PlaybookRule {
+  id?: number;
+  section: string;
+  text: string;
+  position?: number;
+  used_on?: number;
+}
+
+export interface PlaybookStats {
+  trades: number;
+  open: number;
+  missed: number;
+  wins: number;
+  losses: number;
+  breakevens: number;
+  win_rate: number;
+  profit_factor: number | null;
+  expectancy: number;
+  expectancy_r: number | null;
+  avg_win: number;
+  avg_loss: number;
+  net_by_ccy: Record<string, string>;
+  adherence: number | null;
+}
+
+export interface BriefStats {
+  trades: number; win_rate: number; profit_factor: number | null; expectancy: number;
+  expectancy_r: number | null; net_by_ccy: Record<string, string>;
+}
+
+export interface Playbook {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  archived: boolean;
+  rules: PlaybookRule[];
+  sections: string[];
+  stats?: PlaybookStats;
+}
+
+export interface PlaybookDetail extends Playbook {
+  stats: PlaybookStats & {
+    largest_win: string; largest_loss: string; max_drawdown: string;
+    equity: { id: number; date: string; cumulative: number; drawdown: number }[];
+    followed_all: BriefStats; broke_rules: BriefStats;
+    per_rule: { rule_id: number; section: string; text: string; followed: number; not_followed: number;
+      follow_rate: number | null; win_rate_followed: number | null; win_rate_not_followed: number | null }[];
+  };
+  trades: TradeSummary[];
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -367,6 +426,24 @@ export const api = {
       body: JSON.stringify({ trade_ids: tradeIds, style }),
     }),
   listStyles: () => request<string[]>("/api/trades/styles"),
+
+  // Playbooks
+  listPlaybooks: (params: { include_archived?: boolean; include_demo?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.append(k, String(v)); });
+    return request<Playbook[]>(`/api/playbooks?${qs}`);
+  },
+  getPlaybook: (id: number) => request<PlaybookDetail>(`/api/playbooks/${id}`),
+  createPlaybook: (body: { name: string; description?: string; color?: string; rules: PlaybookRule[] }) =>
+    request<Playbook>("/api/playbooks", { method: "POST", body: JSON.stringify(body) }),
+  updatePlaybook: (id: number, body: { name?: string; description?: string; color?: string; archived?: boolean; rules?: PlaybookRule[] }) =>
+    request<Playbook>(`/api/playbooks/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  duplicatePlaybook: (id: number) => request<Playbook>(`/api/playbooks/${id}/duplicate`, { method: "POST" }),
+  deletePlaybook: (id: number) => request<void>(`/api/playbooks/${id}`, { method: "DELETE" }),
+  setTradePlaybook: (tradeId: number, playbookId: number | null, ruleIds: number[]) =>
+    request<TradeDetail>(`/api/trades/${tradeId}/playbook`, {
+      method: "PUT", body: JSON.stringify({ playbook_id: playbookId, rule_ids: ruleIds }),
+    }),
   setStyles: (styles: string[]) =>
     request<string[]>("/api/trades/styles", { method: "PUT", body: JSON.stringify({ styles }) }),
 

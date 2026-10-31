@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ExecutionRow, TradeDetail as TradeDetailT } from "../lib/api";
 import { useConfig } from "../lib/config";
@@ -19,6 +19,7 @@ import {
   StylePicker, TagChips,
 } from "../components/journal/Pickers";
 import EditableText from "../components/EditableText";
+import { PlaybookPicker, usePlaybooks } from "../components/playbooks/shared";
 
 export default function TradeDetail() {
   const { id } = useParams();
@@ -252,6 +253,8 @@ export default function TradeDetail() {
             </div>
           </Section>
 
+          <PlaybookSection trade={trade} onSaved={setTrade} />
+
           <FlagsSection tradeId={trade.id} />
 
           <Section title="Notes">
@@ -278,6 +281,58 @@ export default function TradeDetail() {
         <ExecutionEditModal exec={editExec} tz={tz} onClose={() => setEditExec(null)} onSaved={() => { setEditExec(null); load(); }} />
       )}
     </div>
+  );
+}
+
+/** Which playbook this trade belongs to and the rules followed; saved as you tick. */
+function PlaybookSection({ trade, onSaved }: { trade: TradeDetailT; onSaved: (t: TradeDetailT) => void }) {
+  const { playbooks } = usePlaybooks();
+  const [pid, setPid] = useState<number | null>(trade.playbook?.id ?? null);
+  const [ids, setIds] = useState<number[]>(trade.checked_rule_ids ?? []);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { setPid(trade.playbook?.id ?? null); setIds(trade.checked_rule_ids ?? []); }, [trade.id]);
+
+  // Saves run one at a time; ticks made meanwhile are sent next, so the
+  // latest state always wins even when you tick quickly.
+  const inflight = useRef(false);
+  const pending = useRef<{ pid: number | null; ids: number[] } | null>(null);
+
+  async function change(nextPid: number | null, nextIds: number[]) {
+    setPid(nextPid);
+    setIds(nextIds);
+    setErr(null);
+    if (inflight.current) {
+      pending.current = { pid: nextPid, ids: nextIds };
+      return;
+    }
+    inflight.current = true;
+    let job: { pid: number | null; ids: number[] } | null = { pid: nextPid, ids: nextIds };
+    let saved: TradeDetailT | null = null;
+    while (job) {
+      try {
+        saved = await api.setTradePlaybook(trade.id, job.pid, job.ids);
+      } catch (e) {
+        setErr((e as Error).message.replace(/^\d+:\s*/, ""));
+        saved = await api.getTrade(trade.id).catch(() => null); // show what was actually stored
+        if (saved) { setPid(saved.playbook?.id ?? null); setIds(saved.checked_rule_ids ?? []); }
+        pending.current = null;
+      }
+      job = pending.current;
+      pending.current = null;
+    }
+    inflight.current = false;
+    if (saved) onSaved(saved);
+  }
+
+  return (
+    <Section title="Playbook" action={pid ? <a className="text-xs text-accent-soft hover:underline" href={`/playbooks/${pid}`}>Open</a> : undefined}>
+      {playbooks.filter((p) => !p.archived).length === 0 && !pid ? (
+        <p className="text-sm text-ink-faint">No playbooks yet. <a className="text-accent-soft hover:underline" href="/playbooks">Create one</a> to track which rules you follow.</p>
+      ) : (
+        <PlaybookPicker playbooks={playbooks} playbookId={pid} checked={ids} onChange={change} />
+      )}
+      {err && <p className="text-xs text-neg mt-1">{err}</p>}
+    </Section>
   );
 }
 

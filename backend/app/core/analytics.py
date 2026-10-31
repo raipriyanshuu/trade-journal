@@ -54,6 +54,18 @@ def dashboard(trades: list[Trade]) -> dict:
         net = sum((Decimal(t.net_pnl) for t in sub), ZERO)
         wl.append({"direction": direction, "wins": wins, "losses": losses, "net": float(net)})
 
+    # Day-level results and the edge score.
+    win_days = sum(1 for v in daily.values() if v > 0)
+    loss_days = sum(1 for v in daily.values() if v < 0)
+    stats.update({
+        "days": len(daily),
+        "winning_days": win_days,
+        "losing_days": loss_days,
+        "day_win_rate": round(win_days / (win_days + loss_days), 4) if (win_days + loss_days) else 0.0,
+    })
+    edge = edge_score(stats, daily, Decimal(eq["max_drawdown"]))
+    stats["recovery_factor"] = edge["recovery_factor"]
+
     stats.update({
         "max_drawdown": eq["max_drawdown"],
         "max_drawdown_pct": eq["max_drawdown_pct"],
@@ -69,6 +81,53 @@ def dashboard(trades: list[Trade]) -> dict:
         "daily_pnl": daily_pnl,
         "r_distribution": r_dist,
         "winloss_by_direction": wl,
+        "edge": edge,
+    }
+
+
+def _clamp(x: float) -> float:
+    return max(0.0, min(1.0, x))
+
+
+def edge_score(stats: dict, daily: dict, max_dd: Decimal) -> dict:
+    """A 0-100 summary of how healthy the results are, from six parts (each 0-100).
+
+    win %          20% -> 0, 60% -> 100
+    profit factor  0.8 -> 0, 2.5 -> 100
+    avg win/loss   0.5 -> 0, 2.5 -> 100
+    recovery       net P&L / max drawdown: 0 -> 0, 3 -> 100
+    drawdown       max drawdown as a share of gross profit: 100% -> 0, 0% -> 100
+    consistency    share of profit from the best day: 80%+ -> 0, 20% or less -> 100
+    Weighted 15 / 25 / 20 / 10 / 20 / 10. Needs at least 5 closed trades.
+    """
+    pf = stats.get("profit_factor")
+    pf_v = 3.0 if pf is None and stats.get("wins") else float(pf or 0)
+    awl = stats.get("avg_win_loss_ratio")
+    awl_v = 3.0 if awl is None and stats.get("wins") else float(awl or 0)
+    net = float(Decimal(stats.get("net_pnl") or "0"))
+    dd = abs(float(max_dd))
+    gross_profit = float(stats.get("avg_win") or 0) * int(stats.get("wins") or 0)
+    recovery = (net / dd) if dd else (3.0 if net > 0 else 0.0)
+    pos_days = [float(v) for v in daily.values() if v > 0]
+    best_share = (max(pos_days) / sum(pos_days)) if pos_days else 1.0
+
+    parts = {
+        "win_rate": _clamp((float(stats.get("win_rate") or 0) - 0.2) / 0.4),
+        "profit_factor": _clamp((pf_v - 0.8) / 1.7),
+        "avg_win_loss": _clamp((awl_v - 0.5) / 2.0),
+        "recovery_factor": _clamp(recovery / 3.0),
+        "max_drawdown": _clamp(1 - dd / gross_profit) if gross_profit else 0.0,
+        "consistency": _clamp((0.8 - best_share) / 0.6) if len(pos_days) > 1 else 0.0,
+    }
+    weights = {"win_rate": 15, "profit_factor": 25, "avg_win_loss": 20,
+               "recovery_factor": 10, "max_drawdown": 20, "consistency": 10}
+    enough = int(stats.get("trades") or 0) >= 5
+    score = sum(parts[k] * w for k, w in weights.items()) / sum(weights.values()) * 100
+    return {
+        "score": round(score, 1) if enough else None,
+        "parts": {k: round(v * 100, 1) for k, v in parts.items()},
+        "recovery_factor": round(recovery, 2) if dd else None,
+        "enough_trades": enough,
     }
 
 
@@ -127,6 +186,8 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
     def keys_for(t) -> list[str]:
         if dimension == "style":
             return [t.style or "(unassigned)"]
+        if dimension == "playbook":
+            return [t.playbook.name if t.playbook else "(no playbook)"]
         if dimension == "instrument":
             return [t.instrument.symbol_root if t.instrument else "?"]
         if dimension == "account":

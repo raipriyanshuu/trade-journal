@@ -15,14 +15,15 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.filters import where_style
+from app.core.filters import where_playbook, where_style
 from app.core.market_data import auto_fetch_trade
 from app.core.mistakes import recompute_for_account
+from app.core.playbooks import PlaybookError, set_trade_playbook
 from app.core.results import breakeven_threshold, serialize_detail, serialize_summary, trade_result
 from app.core.styles import get_styles, normalize_style
 from app.core.trade_builder import rebuild_for
 from app.db import get_db
-from app.models import Account, Execution, Instrument, Setting, Trade
+from app.models import Account, Execution, Instrument, Playbook, Setting, Trade
 from app.models.tag import trade_tags
 from app.schemas.trade import (
     ManualTradeCreate,
@@ -60,11 +61,12 @@ def list_trades(
     source: str | None = None,
     tag_id: int | None = None,
     style: str | None = None,
+    playbook: str | None = None,
     include_demo: bool = True,
     sort_by: str = "open_time",
     order: str = "desc",
 ):
-    stmt = where_style(select(Trade), style)
+    stmt = where_playbook(where_style(select(Trade), style), playbook)
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:
@@ -178,6 +180,7 @@ def get_trade(trade_id: int, db: Session = Depends(get_db)):
 
 @router.post("/manual", response_model=TradeDetail, status_code=201)
 def create_manual(payload: ManualTradeCreate, background: BackgroundTasks, db: Session = Depends(get_db)):
+    _check_playbook(db, payload)
     acc = db.get(Account, payload.account_id)
     if acc is None:
         raise HTTPException(404, "Account not found")
@@ -244,6 +247,7 @@ def _apply_trade_meta(db: Session, trade: Trade, payload: ManualTradeCreate) -> 
     trade.self_rating = payload.self_rating
     _apply_journal_fields(db, trade, payload)
     _set_tags(db, trade, payload.tag_ids)
+    _apply_playbook(db, trade, payload)
     db.commit()
     # Recompute R now that stop/risk are set.
     from app.core.trade_builder import recompute_trade_r
@@ -268,6 +272,7 @@ def create_missed(payload: MissedTradeCreate, background: BackgroundTasks, db: S
     """Log a setup you saw but did not take (no executions, no P&L)."""
     from app.core.sessions import trading_date_for
 
+    _check_playbook(db, payload)
     acc = db.get(Account, payload.account_id)
     inst = db.get(Instrument, payload.instrument_id)
     if acc is None or inst is None:
@@ -296,9 +301,30 @@ def create_missed(payload: MissedTradeCreate, background: BackgroundTasks, db: S
     db.add(trade)
     db.flush()
     _set_tags(db, trade, payload.tag_ids)
+    _apply_playbook(db, trade, payload)
     db.commit()
     background.add_task(auto_fetch_trade, trade.id)  # chart of the setup you missed
     return serialize_detail(db, _get_trade_or_404(db, trade.id))
+
+
+def _check_playbook(db: Session, payload) -> None:
+    """Reject an unknown playbook or foreign rules before anything is saved."""
+    if payload.playbook_id is None:
+        return
+    pb = db.get(Playbook, payload.playbook_id)
+    if pb is None:
+        raise HTTPException(422, "Playbook not found")
+    if set(payload.rule_ids) - {r.id for r in pb.rules}:
+        raise HTTPException(422, "Some ticked rules don't belong to that playbook")
+
+
+def _apply_playbook(db: Session, trade: Trade, payload) -> None:
+    if payload.playbook_id is None:
+        return
+    try:
+        set_trade_playbook(db, trade, payload.playbook_id, payload.rule_ids)
+    except PlaybookError as exc:
+        raise HTTPException(422, str(exc))
 
 
 def _set_tags(db: Session, trade: Trade, tag_ids: list[int]) -> None:

@@ -1,6 +1,7 @@
 import { UNASSIGNED_STYLE } from "../lib/api";
 import { styleTone, useStyles } from "../lib/useStyles";
 import { useReference } from "../lib/useReference";
+import { usePlaybooks } from "./playbooks/shared";
 
 export interface AnalyticsFilters {
   account_id?: number;
@@ -9,6 +10,7 @@ export interface AnalyticsFilters {
   date_to?: string;
   currency?: string;
   style?: string;
+  playbook?: string;
   include_demo?: boolean;
 }
 
@@ -20,6 +22,7 @@ export default function AnalyticsFilterBar({
   onChange: (f: AnalyticsFilters) => void;
 }) {
   const { accounts, instruments } = useReference();
+  const { playbooks } = usePlaybooks();
   function set<K extends keyof AnalyticsFilters>(k: K, v: AnalyticsFilters[K]) {
     onChange({ ...filters, [k]: v === "" || v === undefined ? undefined : v });
   }
@@ -38,6 +41,14 @@ export default function AnalyticsFilterBar({
         <select className="input !w-auto" value={filters.instrument_id ?? ""} onChange={(e) => set("instrument_id", e.target.value ? Number(e.target.value) : undefined)}>
           <option value="">All</option>
           {instruments.map((i) => <option key={i.id} value={i.id}>{i.symbol_root}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="label">Playbook</label>
+        <select className="input !w-auto" value={filters.playbook ?? ""} onChange={(e) => set("playbook", e.target.value)}>
+          <option value="">All</option>
+          {playbooks.map((p) => <option key={p.id} value={String(p.id)}>{p.name}{p.archived ? " (archived)" : ""}</option>)}
+          <option value="none">No playbook</option>
         </select>
       </div>
       <div>

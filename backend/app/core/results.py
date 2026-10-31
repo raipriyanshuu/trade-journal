@@ -41,6 +41,18 @@ def _tags_in(trade: Trade, category: str) -> list[str]:
     return [t.name for t in trade.tags if t.category == category]
 
 
+def _playbook_fields(trade: Trade) -> dict:
+    pb = trade.playbook
+    if pb is None:
+        return {"playbook": None, "rules_followed": None, "rules_total": None}
+    ids = {r.id for r in pb.rules}
+    return {
+        "playbook": {"id": pb.id, "name": pb.name, "color": pb.color},
+        "rules_followed": sum(1 for r in trade.checked_rules if r.id in ids),
+        "rules_total": len(ids),
+    }
+
+
 def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = None) -> dict:
     if threshold is None:
         threshold = breakeven_threshold(db, trade.currency)
@@ -84,6 +96,7 @@ def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = Non
         "htf_alignment": trade.htf_alignment,
         "partial_profit": trade.partial_profit,
         "style": trade.style,
+        **_playbook_fields(trade),
         "outcome": trade.outcome,
         "pnl_known": trade.pnl_known,
         "context": trade.context,
@@ -107,6 +120,7 @@ def serialize_detail(db: Session, trade: Trade) -> dict:
             "vwap_relation": trade.vwap_relation,
             "entry_location": trade.entry_location,
             "notes": trade.notes,
+            "checked_rule_ids": [r.id for r in trade.checked_rules],
             "executions": sorted(trade.executions, key=lambda e: (e.timestamp, e.id)),
             "attachments": trade.attachments if hasattr(trade, "attachments") else [],
         }

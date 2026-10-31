@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import accounts, attachments, demo, executions, health, instruments, journal, tags, trades
 from app.api import analytics as analytics_api
+from app.api import playbooks as playbooks_api
 from app.api import export as export_api
 from app.api import mistakes as mistakes_api
 from app.api import importing as import_api
@@ -67,6 +68,7 @@ app.include_router(tags.router)
 app.include_router(journal.router)
 app.include_router(mistakes_api.router)
 app.include_router(analytics_api.router)
+app.include_router(playbooks_api.router)
 app.include_router(trades.router)
 app.include_router(executions.router)
 app.include_router(attachments.router)

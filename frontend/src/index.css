@@ -2,9 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme palettes (RGB triples). Dark is the default; data-theme="light" on <html> switches. */
 :root {
   color-scheme: dark;
+  --tj-bg: 10 14 23;
+  --tj-bg-soft: 15 20 32;
+  --tj-card: 20 26 39;
+  --tj-card-hover: 26 33 48;
+  --tj-card-border: 35 43 59;
+  --tj-ink: 231 236 243;
+  --tj-ink-muted: 154 166 184;
+  --tj-ink-faint: 107 118 136;
+  --tj-accent: 109 107 246;
+  --tj-accent-soft: 143 141 251;
+  --tj-pos: 34 197 139;
+  --tj-neg: 240 86 107;
+  --tj-warn: 243 181 61;
+  --tj-scroll: 35 43 59;
+  --tj-scroll-hover: 47 58 78;
 }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --tj-bg: 244 246 251;
+  --tj-bg-soft: 236 240 246;
+  --tj-card: 255 255 255;
+  --tj-card-hover: 241 244 249;
+  --tj-card-border: 223 228 238;
+  --tj-ink: 17 24 39;
+  --tj-ink-muted: 75 85 99;
+  --tj-ink-faint: 128 138 156;
+  --tj-accent: 91 87 232;
+  --tj-accent-soft: 99 96 240;
+  --tj-pos: 13 150 102;
+  --tj-neg: 220 52 78;
+  --tj-warn: 196 132 14;
+  --tj-scroll: 205 212 224;
+  --tj-scroll-hover: 175 184 199;
+}
+/* Chip text shades tuned for dark backgrounds need more contrast on light ones. */
+:root[data-theme="light"] .text-sky-300 { color: #0369a1; }
+:root[data-theme="light"] .text-violet-300 { color: #6d28d9; }
+:root[data-theme="light"] .text-amber-300 { color: #a16207; }
+:root[data-theme="light"] .text-teal-300 { color: #0f766e; }
+:root[data-theme="light"] .text-pink-300 { color: #be185d; }
+:root[data-theme="light"] .text-orange-300 { color: #c2410c; }
+:root[data-theme="light"] .text-emerald-300 { color: #047857; }
+:root[data-theme="light"] .text-white.bg-pos, :root[data-theme="light"] .text-white.bg-neg { color: #fff; }
 
 html,
 body,
@@ -38,11 +81,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #232b3b;
+  background: rgb(var(--tj-scroll));
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2f3a4e;
+  background: rgb(var(--tj-scroll-hover));
 }
 
 @layer components {

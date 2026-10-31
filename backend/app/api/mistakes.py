@@ -115,11 +115,12 @@ def analytics(
     instrument_id: int | None = None,
     currency: str | None = None,
     style: str | None = None,
+    playbook: str | None = None,
     include_demo: bool = True,
 ):
     trades = filtered_trades(
         db, date_from=date_from, date_to=date_to, account_id=account_id,
-        instrument_id=instrument_id, currency=currency, style=style, include_demo=include_demo,
+        instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, include_demo=include_demo,
     )
     tz = _setting(db, "display_timezone", "Asia/Kolkata")
     big_win_r = float(_setting(db, "big_win_threshold_r", 2) or 2)
@@ -136,11 +137,12 @@ def drilldown(
     instrument_id: int | None = None,
     currency: str | None = None,
     style: str | None = None,
+    playbook: str | None = None,
     include_demo: bool = True,
 ):
     trades = filtered_trades(
         db, date_from=date_from, date_to=date_to, account_id=account_id,
-        instrument_id=instrument_id, currency=currency, style=style, include_demo=include_demo,
+        instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, include_demo=include_demo,
     )
     out = []
     for t in trades:

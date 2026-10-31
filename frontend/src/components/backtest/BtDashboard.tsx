@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "../../lib/theme";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -7,10 +8,6 @@ import { formatDuration } from "../../lib/format";
 import BtTradesTable from "./BtTradesTable";
 import Lightbox from "../Lightbox";
 
-const POS = "#22c58b";
-const NEG = "#f0566b";
-const GRID = "#232b3b";
-const tip = { background: "#141a27", border: "1px solid #232b3b", fontSize: 12 };
 
 /** Backtest results: KPIs, equity, strategy comparison and breakdowns. */
 export default function BtDashboard({ sessions, strategies, refreshKey }: {
@@ -18,6 +15,8 @@ export default function BtDashboard({ sessions, strategies, refreshKey }: {
   strategies: string[];
   refreshKey: number;
 }) {
+  const { c } = useTheme();
+  const POS = c.pos, NEG = c.neg, GRID = c.border, tip = c.tooltip;
   const [strategy, setStrategy] = useState("");
   const [symbol, setSymbol] = useState("");
   const [sessionId, setSessionId] = useState<number | "">("");
@@ -87,8 +86,8 @@ export default function BtDashboard({ sessions, strategies, refreshKey }: {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                  <XAxis dataKey="n" tick={{ fill: "#6b7688", fontSize: 10 }} />
-                  <YAxis tick={{ fill: "#6b7688", fontSize: 10 }} width={64} domain={["auto", "auto"]} />
+                  <XAxis dataKey="n" tick={{ fill: c.faint, fontSize: 10 }} />
+                  <YAxis tick={{ fill: c.faint, fontSize: 10 }} width={64} domain={["auto", "auto"]} />
                   <Tooltip contentStyle={tip} formatter={(v: number) => money(v)} labelFormatter={(n) => `Trade #${n}`} />
                   <Area type="monotone" dataKey="equity" stroke={POS} fill="url(#bteq)" strokeWidth={2} />
                 </AreaChart>
@@ -99,8 +98,8 @@ export default function BtDashboard({ sessions, strategies, refreshKey }: {
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={data.r_distribution}>
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                  <XAxis dataKey="bucket" tick={{ fill: "#6b7688", fontSize: 10 }} />
-                  <YAxis tick={{ fill: "#6b7688", fontSize: 10 }} width={28} allowDecimals={false} />
+                  <XAxis dataKey="bucket" tick={{ fill: c.faint, fontSize: 10 }} />
+                  <YAxis tick={{ fill: c.faint, fontSize: 10 }} width={28} allowDecimals={false} />
                   <Tooltip contentStyle={tip} />
                   <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                     {data.r_distribution.map((d, i) => <Cell key={i} fill={d.bucket.startsWith("<") || d.bucket.startsWith("-") ? NEG : POS} />)}

@@ -42,6 +42,8 @@ class JournalFields(BaseModel):
     behaviour: str = ""
     partial_profit: bool = False
     style: str | None = None
+    playbook_id: int | None = None
+    rule_ids: list[int] = []
 
 
 class ManualTradeCreate(JournalFields):
@@ -146,6 +148,9 @@ class TradeSummary(ORMModel):
     htf_alignment: str | None = None
     partial_profit: bool = False
     style: str | None = None
+    playbook: dict | None = None
+    rules_followed: int | None = None
+    rules_total: int | None = None
     outcome: str | None = None
     pnl_known: bool = True
     context: str = ""
@@ -166,5 +171,6 @@ class TradeDetail(TradeSummary):
     entry_location: str
     notes: str
     currency: str
+    checked_rule_ids: list[int] = []
     executions: list[ExecutionRead] = []
     attachments: list[AttachmentRead] = []

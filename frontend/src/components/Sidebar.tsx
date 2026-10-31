@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTheme } from "../lib/theme";
 
 interface NavItem {
   to: string;
@@ -13,6 +14,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/journal", label: "Trading Day", icon: "✎" },
       { to: "/trades", label: "Trade Log", icon: "≡" },
+      { to: "/playbooks", label: "Playbooks", icon: "▤" },
       { to: "/calendar", label: "P&L Calendar", icon: "▦" },
     ],
   },
@@ -48,6 +50,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 ];
 
 export default function Sidebar() {
+  const { theme, toggle } = useTheme();
   return (
     <aside className="w-56 shrink-0 border-r border-card-border bg-bg-soft flex flex-col">
       <div className="h-14 flex items-center px-4 border-b border-card-border">
@@ -81,8 +84,16 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="p-3 text-xs text-ink-faint border-t border-card-border">
-        Local &middot; 127.0.0.1 &middot; v0.2
+      <div className="p-3 border-t border-card-border space-y-2">
+        <div className="flex p-0.5 bg-card rounded-lg border border-card-border text-xs" role="group" aria-label="Theme">
+          {(["dark", "light"] as const).map((t) => (
+            <button key={t} onClick={() => theme !== t && toggle()}
+              className={`flex-1 py-1 rounded-md transition-colors ${theme === t ? "bg-accent/20 text-ink font-medium" : "text-ink-faint hover:text-ink"}`}>
+              {t === "dark" ? "☾ Dark" : "☀ Light"}
+            </button>
+          ))}
+        </div>
+        <div className="text-xs text-ink-faint">Local &middot; 127.0.0.1 &middot; v0.2</div>
       </div>
     </aside>
   );

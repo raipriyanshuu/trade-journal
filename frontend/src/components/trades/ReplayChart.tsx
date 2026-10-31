@@ -4,6 +4,7 @@ import {
 } from "lightweight-charts";
 import { Link } from "react-router-dom";
 import { api, ReplayData } from "../../lib/api";
+import { useTheme } from "../../lib/theme";
 
 const LINE_STYLES = [LineStyle.Solid, LineStyle.Dotted, LineStyle.Dashed];
 
@@ -14,6 +15,7 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
   const [fetching, setFetching] = useState(false);
   const [fetchErr, setFetchErr] = useState<string | null>(null);
   const autoTried = useRef(false);
+  const { c } = useTheme();
 
   const load = () => api.replay(tradeId).then(setData).catch((e) => setErr((e as Error).message));
 
@@ -47,15 +49,15 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
     if (!el.current || !data || data.candles.length === 0) return;
     const chart = createChart(el.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#141a27" }, textColor: "#9aa6b8", fontSize: 11 },
-      grid: { vertLines: { color: "#1b2230" }, horzLines: { color: "#1b2230" } },
-      rightPriceScale: { borderColor: "#232b3b" },
-      timeScale: { borderColor: "#232b3b", timeVisible: true, secondsVisible: false },
+      layout: { background: { type: ColorType.Solid, color: c.card }, textColor: c.muted, fontSize: 11 },
+      grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+      rightPriceScale: { borderColor: c.border },
+      timeScale: { borderColor: c.border, timeVisible: true, secondsVisible: false },
       crosshair: { mode: CrosshairMode.Normal },
     });
     const series = chart.addCandlestickSeries({
-      upColor: "#22c58b", downColor: "#f0566b", borderVisible: false,
-      wickUpColor: "#22c58b", wickDownColor: "#f0566b",
+      upColor: c.pos, downColor: c.neg, borderVisible: false,
+      wickUpColor: c.pos, wickDownColor: c.neg,
     });
     const candles = data.candles.map((c) => ({ ...c, time: c.time as UTCTimestamp }));
     series.setData(candles);
@@ -74,7 +76,7 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
     for (const f of fills) if (!f.missed) path.set(snap(f.time) as number, f.price);
     if (path.size >= 2) {
       const pathSeries = chart.addLineSeries({
-        color: "#8f8dfb", lineWidth: 1, lineStyle: LineStyle.Dashed, lastValueVisible: false,
+        color: c.accentSoft, lineWidth: 1, lineStyle: LineStyle.Dashed, lastValueVisible: false,
         priceLineVisible: false, crosshairMarkerVisible: false,
       });
       pathSeries.setData([...path.entries()].map(([time, value]) => ({ time: time as UTCTimestamp, value })));
@@ -84,7 +86,7 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
     // fill price ("inBar") instead of under/over the candle.
     for (const f of fills) {
       const t = snap(f.time);
-      const color = f.missed ? "#f3b53d" : f.matched === false ? "#f3b53d" : f.side === "buy" ? "#22c58b" : "#f0566b";
+      const color = f.missed ? c.warn : f.matched === false ? c.warn : f.side === "buy" ? c.pos : c.neg;
       const s = chart.addLineSeries({
         lineVisible: false, pointMarkersVisible: false, lastValueVisible: false,
         priceLineVisible: false, crosshairMarkerVisible: false,
@@ -107,7 +109,7 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
     }
     chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [data]);
+  }, [data, c]);
 
   if (err) return <p className="text-neg text-sm">{err}</p>;
   if (!data) return <p className="text-ink-faint text-sm">Loading chart&hellip;</p>;

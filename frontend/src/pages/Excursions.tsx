@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "../lib/theme";
 import { useNavigate } from "react-router-dom";
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import { api } from "../lib/api";
 import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFilterBar";
 
-const POS = "#22c58b";
-const NEG = "#f0566b";
-const GRID = "#232b3b";
 
 export default function Excursions() {
+  const { c } = useTheme();
+  const POS = c.pos, NEG = c.neg, GRID = c.border;
   const nav = useNavigate();
   const [filters, setFilters] = useState<AnalyticsFilters>({ include_demo: true });
   const [adverse, setAdverse] = useState(0.5);
@@ -81,17 +81,17 @@ export default function Excursions() {
             <ResponsiveContainer width="100%" height={380}>
               <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 0 }}>
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                <XAxis type="number" dataKey="x" name="MAE" tick={{ fill: "#6b7688", fontSize: 10 }}
-                  label={{ value: `MAE (${u === "r" ? "R" : "pts"})`, position: "insideBottom", offset: -10, fill: "#6b7688", fontSize: 11 }} />
-                <YAxis type="number" dataKey="y" name="MFE" tick={{ fill: "#6b7688", fontSize: 10 }} width={44} />
+                <XAxis type="number" dataKey="x" name="MAE" tick={{ fill: c.faint, fontSize: 10 }}
+                  label={{ value: `MAE (${u === "r" ? "R" : "pts"})`, position: "insideBottom", offset: -10, fill: c.faint, fontSize: 11 }} />
+                <YAxis type="number" dataKey="y" name="MFE" tick={{ fill: c.faint, fontSize: 10 }} width={44} />
                 <ZAxis range={[50, 50]} />
-                {u === "r" && <ReferenceLine x={data.adverse_r_threshold} stroke="#f3b53d" strokeDasharray="4 3" />}
-                <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "#141a27", border: "1px solid #232b3b", fontSize: 12 }}
+                {u === "r" && <ReferenceLine x={data.adverse_r_threshold} stroke={c.warn} strokeDasharray="4 3" />}
+                <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={c.tooltip}
                   formatter={(v: number) => v.toFixed(2)}
                   labelFormatter={() => ""} />
                 <Scatter name="Winners" data={series("win")} fill={POS} onClick={(p: any) => nav(`/trades/${p.trade_id}`)} cursor="pointer" />
                 <Scatter name="Losers" data={series("loss")} fill={NEG} onClick={(p: any) => nav(`/trades/${p.trade_id}`)} cursor="pointer" />
-                <Scatter name="Breakeven" data={series("breakeven")} fill="#9aa6b8" onClick={(p: any) => nav(`/trades/${p.trade_id}`)} cursor="pointer" />
+                <Scatter name="Breakeven" data={series("breakeven")} fill={c.muted} onClick={(p: any) => nav(`/trades/${p.trade_id}`)} cursor="pointer" />
               </ScatterChart>
             </ResponsiveContainer>
             {unit === "r" && !hasR && <p className="text-xs text-warn mt-2">No trades in range have a stop or planned risk, so R can't be computed &mdash; showing points.</p>}

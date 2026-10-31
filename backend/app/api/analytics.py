@@ -15,7 +15,7 @@ from app.models import Setting
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 DIMENSIONS = [
-    "style", "setup_tag", "location", "probability", "thesis", "entry_quality", "exit_quality",
+    "style", "playbook", "setup_tag", "location", "probability", "thesis", "entry_quality", "exit_quality",
     "htf_alignment", "with_htf", "atr_used", "mistake_tag", "emotion_tag",
     "instrument", "account", "direction", "session_time", "clock_time", "weekday",
     "scenario", "planned", "checklist_score", "vwap", "entry_location",
@@ -41,10 +41,11 @@ def dashboard(
     instrument_id: int | None = None,
     currency: str | None = None,
     style: str | None = None,
+    playbook: str | None = None,
     include_demo: bool = True,
 ):
     trades = _trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                     instrument_id=instrument_id, currency=currency, style=style, include_demo=include_demo)
+                     instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, include_demo=include_demo)
     return analytics.dashboard(trades)
 
 
@@ -55,10 +56,11 @@ def calendar(
     instrument_id: int | None = None,
     currency: str | None = None,
     style: str | None = None,
+    playbook: str | None = None,
     include_demo: bool = True,
 ):
     trades = _trades(db, account_id=account_id, instrument_id=instrument_id,
-                     currency=currency, style=style, include_demo=include_demo)
+                     currency=currency, style=style, playbook=playbook, include_demo=include_demo)
     return analytics.calendar(trades)
 
 
@@ -72,10 +74,11 @@ def breakdown(
     instrument_id: int | None = None,
     currency: str | None = None,
     style: str | None = None,
+    playbook: str | None = None,
     include_demo: bool = True,
 ):
     trades = _trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                     instrument_id=instrument_id, currency=currency, style=style, include_demo=include_demo)
+                     instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, include_demo=include_demo)
     return analytics.breakdown(db, trades, dimension, _tz(db))
 
 

@@ -3,6 +3,7 @@ import {
   ColorType, createChart, CrosshairMode, IChartApi, IPriceLine, ISeriesApi, LineStyle, UTCTimestamp,
 } from "lightweight-charts";
 import { Candle, Marker, VwapPoint } from "../../lib/backtestApi";
+import { useTheme } from "../../lib/theme";
 
 export interface ChartLine {
   id: string; // "draft-stop", "t12-stop" ...
@@ -55,6 +56,7 @@ const BtChart = forwardRef<BtChartHandle, Props>(function BtChart(props, ref) {
   const cb = useRef({ onLineDrag: props.onLineDrag, onPickPrice: props.onPickPrice });
   cb.current = { onLineDrag: props.onLineDrag, onPickPrice: props.onPickPrice };
   linesRef.current = props.lines;
+  const { c: pal } = useTheme();
 
   useImperativeHandle(ref, () => ({
     screenshot: () =>
@@ -148,6 +150,16 @@ const BtChart = forwardRef<BtChartHandle, Props>(function BtChart(props, ref) {
       prev.current = { key: "", candles: [] };
     };
   }, []);
+
+  useEffect(() => {
+    chart.current?.applyOptions({
+      layout: { background: { type: ColorType.Solid, color: pal.card }, textColor: pal.muted },
+      grid: { vertLines: { color: pal.grid }, horzLines: { color: pal.grid } },
+      rightPriceScale: { borderColor: pal.border },
+      timeScale: { borderColor: pal.border },
+    });
+    candle.current?.applyOptions({ upColor: pal.pos, downColor: pal.neg, wickUpColor: pal.pos, wickDownColor: pal.neg });
+  }, [pal]);
 
   useEffect(() => {
     chart.current?.applyOptions({ timeScale: { timeVisible: props.intraday } });

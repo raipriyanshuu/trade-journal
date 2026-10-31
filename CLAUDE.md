@@ -98,6 +98,19 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   calendar, breakdown dimensions), `importing` (CSV/Notion wizard backend),
   `export`, `bars`, `excursions` (MAE/MFE), `replay`, `reports`, `charges` (NSE/MCX),
   `market_data` (Yahoo), `autobackup`.
+- **Playbooks:** `models/playbook.py` (Playbook, PlaybookRule, `trade_rule_checks`),
+  `trades.playbook_id` (SET NULL on delete). Logic + stats in `core/playbooks.py`
+  (`sync_rules` keeps ids for edited rules, deletes removed ones), API in
+  `api/playbooks.py` (incl. `PUT /api/trades/{id}/playbook`). Filter param
+  `playbook` (id or "none") everywhere `style` is accepted. Rebuilds keep
+  `playbook_id` (in `_META_FIELDS`) and ticked rules (`rule_ids` in meta).
+  Frontend: `pages/Playbooks.tsx`, `pages/PlaybookDetail.tsx`,
+  `components/playbooks/{shared,PlaybookEditor}.tsx`.
+- **Theme:** colours are CSS variables (`--tj-*` RGB triples in `index.css`,
+  `data-theme="light"` on <html>); Tailwind colours read them. Charts can't use
+  CSS vars: take colours from `useTheme().c` (`lib/theme.tsx`). Never hard-code hex.
+- **Dashboard extras:** `core/analytics.py: edge_score()` (formula in docstring),
+  `day_win_rate`, `recovery_factor`.
 - **Backtest (bar replay), fully separate:** `backend/app/backtest/` with its own
   SQLite file `data/backtest.db` (own `BtBase`, tables via `create_all` in
   `init_db()`; NOT Alembic: add columns with an explicit ALTER in `init_db`).

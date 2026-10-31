@@ -7,6 +7,7 @@ import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
 import ScrollX from "../components/ScrollX";
+import { PlaybookBadge, usePlaybooks } from "../components/playbooks/shared";
 import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, StyleBadge, TagChips } from "../components/journal/Pickers";
 
 type View = "journal" | "numbers";
@@ -39,6 +40,7 @@ export default function TradeLog() {
   const [newTagName, setNewTagName] = useState("");
   const [newTagCat, setNewTagCat] = useState("setup");
   const { styles } = useStyles();
+  const { playbooks } = usePlaybooks();
   const [bulkStyle, setBulkStyle] = useState("");
 
   async function applyBulkStyle() {
@@ -136,6 +138,11 @@ export default function TradeLog() {
           {instruments.map((i) => (
             <option key={i.id} value={i.id}>{i.symbol_root}</option>
           ))}
+        </FilterSelect>
+        <FilterSelect label="Playbook" value={filters.playbook ?? ""} onChange={(v) => set("playbook", v)}>
+          <option value="">All</option>
+          {playbooks.map((p) => <option key={p.id} value={String(p.id)}>{p.name}{p.archived ? " (archived)" : ""}</option>)}
+          <option value="none">No playbook</option>
         </FilterSelect>
         <FilterSelect label="Style" value={filters.style ?? ""} onChange={(v) => set("style", v)}>
           <option value="">All</option>
@@ -240,7 +247,7 @@ export default function TradeLog() {
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
                 <th className="px-3 py-2 w-8"></th>
-                {["Date", "Instrument", "Style", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type",
+                {["Date", "Instrument", "Style", "Playbook", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type",
                   "Mistakes", "Emotion", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
                   <th key={h} className="px-3 py-2 font-medium">{h}</th>
                 ))}
@@ -258,6 +265,7 @@ export default function TradeLog() {
                     {t.is_demo && <span className="badge bg-accent/15 text-accent-soft ml-1">demo</span>}
                   </td>
                   <td className="px-3 py-2"><StyleBadge style={t.style} /></td>
+                  <td className="px-3 py-2"><PlaybookBadge pb={t.playbook} followed={t.rules_followed} total={t.rules_total} /></td>
                   <td className="px-3 py-2 font-mono">{t.max_position_size}</td>
                   <td className="px-3 py-2 text-ink-muted whitespace-nowrap">{t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}</td>
                   <td className="px-3 py-2 font-mono text-ink-muted">{t.dtr && t.atr ? `${Number(t.dtr)}/${Number(t.atr)}` : "—"}</td>
@@ -290,6 +298,7 @@ export default function TradeLog() {
                 <th className="px-3 py-2 font-medium">Time</th>
                 <th className="px-3 py-2 font-medium">Symbol</th>
                 <th className="px-3 py-2 font-medium">Style</th>
+                <th className="px-3 py-2 font-medium">Playbook</th>
                 <th className="px-3 py-2 font-medium">Dir</th>
                 <th className="px-3 py-2 font-medium text-right">Size</th>
                 <th className="px-3 py-2 font-medium text-right">Entry</th>
@@ -320,6 +329,7 @@ export default function TradeLog() {
                     {t.is_demo && <span className="badge bg-accent/15 text-accent-soft ml-1">demo</span>}
                   </td>
                   <td className="px-3 py-2"><StyleBadge style={t.style} /></td>
+                  <td className="px-3 py-2"><PlaybookBadge pb={t.playbook} followed={t.rules_followed} total={t.rules_total} /></td>
                   <td className={`px-3 py-2 ${t.direction === "long" ? "text-pos" : "text-neg"}`}>
                     {t.direction === "long" ? "Long" : "Short"}
                   </td>

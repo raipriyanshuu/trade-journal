@@ -12,6 +12,7 @@ from app.models.attachment import Attachment
 from app.models.importing import ImportBatch, MappingProfile
 from app.models.setting import Setting
 from app.models.bar import Bar
+from app.models.playbook import Playbook, PlaybookRule, trade_rule_checks
 
 __all__ = [
     "Base",
@@ -28,4 +29,7 @@ __all__ = [
     "MappingProfile",
     "Setting",
     "Bar",
+    "Playbook",
+    "PlaybookRule",
+    "trade_rule_checks",
 ]

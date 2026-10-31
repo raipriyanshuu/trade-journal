@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "../lib/theme";
 import {
   bt, BtInstrument, BtSession, BtState, BtTrade, Candle, INTRADAY, mergeTail, money, Timeframe, TIMEFRAMES, VwapPoint,
 } from "../lib/backtestApi";
@@ -11,8 +12,6 @@ import NewSessionModal from "../components/backtest/NewSessionModal";
 import DataModal from "../components/backtest/DataModal";
 import Lightbox from "../components/Lightbox";
 
-const NEG = "#f0566b";
-const POS = "#22c58b";
 const SPEEDS = [1, 2, 4, 8];
 
 function stored<T>(key: string, fallback: T): T {
@@ -30,6 +29,8 @@ function store(key: string, v: unknown) {
 const emptyDraft = (risk: number): Draft => ({ side: "long", stop: "", target: "", sizing: "risk", risk: String(risk), qty: "1", setup: "" });
 
 export default function Backtest() {
+  const { c } = useTheme();
+  const NEG = c.neg, POS = c.pos;
   const [tab, setTab] = useState<"replay" | "dashboard">(stored("bt.tab", "replay"));
   const [instruments, setInstruments] = useState<BtInstrument[]>([]);
   const [sessions, setSessions] = useState<BtSession[]>([]);
@@ -226,7 +227,7 @@ export default function Backtest() {
     for (const l of st?.lines ?? []) {
       out.push({
         id: `t${l.trade_id}-${l.kind}`, price: l.price,
-        color: l.kind === "stop" ? NEG : l.kind === "target" ? POS : "#9aa6b8",
+        color: l.kind === "stop" ? NEG : l.kind === "target" ? POS : c.muted,
         title: l.kind === "entry" ? `#${l.trade_id} entry` : `#${l.trade_id} ${l.kind === "stop" ? "SL" : "TP"}`,
         draggable: l.kind !== "entry",
       });

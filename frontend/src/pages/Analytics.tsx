@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "../lib/theme";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../lib/api";
 import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFilterBar";
 
 const DIM_LABELS: Record<string, string> = {
   style: "Style (scalp / swing...)",
+  playbook: "Playbook",
   instrument: "Instrument", account: "Account", direction: "Direction",
   session_time: "Time in session", clock_time: "Clock time (IST)", weekday: "Day of week",
   setup_tag: "Trade type", location: "Entry location", probability: "Probability", thesis: "What happened",
@@ -16,11 +18,10 @@ const DIM_LABELS: Record<string, string> = {
   position_size: "Position size",
 };
 
-const POS = "#22c58b";
-const NEG = "#f0566b";
-const GRID = "#232b3b";
 
 export default function Analytics() {
+  const { c } = useTheme();
+  const POS = c.pos, NEG = c.neg, GRID = c.border;
   const [filters, setFilters] = useState<AnalyticsFilters>({ include_demo: true });
   const [dims, setDims] = useState<string[]>([]);
   const [dim, setDim] = useState("setup_tag");
@@ -86,9 +87,9 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={Math.max(240, chartData.length * 28)}>
               <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                <XAxis type="number" tick={{ fill: "#6b7688", fontSize: 10 }} />
-                <YAxis type="category" dataKey="key" tick={{ fill: "#9aa6b8", fontSize: 11 }} width={90} />
-                <Tooltip contentStyle={{ background: "#141a27", border: "1px solid #232b3b", fontSize: 12 }} />
+                <XAxis type="number" tick={{ fill: c.faint, fontSize: 10 }} />
+                <YAxis type="category" dataKey="key" tick={{ fill: c.muted, fontSize: 11 }} width={90} />
+                <Tooltip contentStyle={c.tooltip} />
                 <Bar dataKey="net" radius={[0, 3, 3, 0]}>
                   {chartData.map((d, i) => <Cell key={i} fill={d.net >= 0 ? POS : NEG} />)}
                 </Bar>

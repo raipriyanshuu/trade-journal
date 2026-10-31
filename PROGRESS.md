@@ -330,6 +330,26 @@ its own database file `data/backtest.db`, its own candle store and API.
 
 ---
 
+## Playbooks, new dashboard, light/dark theme ✅
+
+- **Playbooks** (sidebar → Journal → Playbooks): each strategy/model has a name,
+  colour, description and rules grouped in sections (Market context, Entry,
+  Exit, Risk…). Everything is editable: rename, add, delete and reorder rules and
+  sections; duplicate, archive or delete a playbook (its trades stay, unassigned).
+  Templates to start from. On every trade (log form and trade page) pick a
+  playbook and tick the rules you followed. Playbook pages show stats, equity,
+  "all rules followed vs broke a rule", and per-rule win rates. Playbook filter
+  on every analytics page, Trade Log column + filter, Playbook breakdown.
+  Playbook and ticks survive trade rebuilds.
+- **Dashboard redesign:** win/day-win gauges, profit-factor ring, avg win/loss
+  bar, Edge score radar (formula in the ⓘ tooltip), cumulative P&L that turns red
+  below zero, daily P&L bars, recent trades / open positions, month calendar
+  with weekly totals, yearly grid, playbook and style tables.
+- **Light / dark theme** switch at the bottom of the sidebar (remembered).
+- **127 backend tests passing.**
+
+---
+
 ## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.

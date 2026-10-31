@@ -23,10 +23,23 @@ def where_style(stmt, style: str | None):
     return stmt.where(func.lower(Trade.style) == style.lower())
 
 
+def where_playbook(stmt, playbook: str | None):
+    """Filter by playbook id; "none" selects trades without a playbook."""
+    if not playbook:
+        return stmt
+    if playbook == "none":
+        return stmt.where(Trade.playbook_id.is_(None))
+    try:
+        return stmt.where(Trade.playbook_id == int(playbook))
+    except ValueError:
+        return stmt.where(Trade.id.is_(None))  # unknown value: match nothing
+
+
 def filtered_trades(
     db: Session,
     *,
     style: str | None = None,
+    playbook: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     account_id: int | None = None,
@@ -41,7 +54,7 @@ def filtered_trades(
     include_approx: bool = True,
     include_pnl_only: bool = True,
 ) -> list[Trade]:
-    stmt = where_style(select(Trade), style)
+    stmt = where_playbook(where_style(select(Trade), style), playbook)
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:
