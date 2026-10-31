@@ -6,6 +6,7 @@ import { useReference } from "../lib/useReference";
 import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
+import ScrollX from "../components/ScrollX";
 import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, StyleBadge, TagChips } from "../components/journal/Pickers";
 
 type View = "journal" | "numbers";
@@ -234,7 +235,7 @@ export default function TradeLog() {
           No trades match. Click <span className="text-ink">+ New trade</span> to add one.
         </div>
       ) : view === "journal" ? (
-        <div className="card overflow-x-auto">
+        <ScrollX>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
@@ -278,9 +279,9 @@ export default function TradeLog() {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollX>
       ) : (
-        <div className="card overflow-x-auto">
+        <ScrollX>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border">
@@ -351,7 +352,7 @@ export default function TradeLog() {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollX>
       )}
 
       {showForm && (

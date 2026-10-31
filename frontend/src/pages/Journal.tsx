@@ -5,6 +5,7 @@ import { useReference } from "../lib/useReference";
 import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, localInputToUtcIso, pnlColor, utcIsoToLocalInput } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
+import ScrollX from "../components/ScrollX";
 import {
   GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, StyleBadge, TagChips,
 } from "../components/journal/Pickers";
@@ -364,7 +365,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
     return <div className="card p-10 text-center text-ink-muted">Nothing logged yet. Log each trade &mdash; and every setup you saw but didn&rsquo;t take.</div>;
   }
   return (
-    <div className="card overflow-x-auto">
+    <ScrollX>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
@@ -399,7 +400,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollX>
   );
 }
 
