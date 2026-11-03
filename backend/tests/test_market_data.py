@@ -81,6 +81,7 @@ def test_fetch_caches_and_snaps_to_tick(client):
     assert replay["sources"] == ["yahoo"] and replay["can_fetch"] is True
     closes = {c["close"] for c in replay["candles"]}
     assert all(abs(c * 4 - round(c * 4)) < 1e-9 for c in closes)  # on the 0.25 tick grid
+    assert {c["volume"] for c in replay["candles"]} == {100.0}  # volume reaches the chart
 
     n_calls = len(CALLS)
     again = client.post(f"/api/trades/{t['id']}/fetch-bars").json()

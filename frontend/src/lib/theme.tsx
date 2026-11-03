@@ -27,9 +27,9 @@ const PALETTES: Record<ThemeName, Omit<Palette, "tooltip">> = {
     accent: "#6d6bf6", accentSoft: "#8f8dfb", pos: "#22c58b", neg: "#f0566b", warn: "#f3b53d",
   },
   light: {
-    bg: "#f4f6fb", card: "#ffffff", cardHover: "#f1f4f9", border: "#dfe4ee", grid: "#edf0f5",
-    ink: "#111827", muted: "#4b5563", faint: "#808a9c",
-    accent: "#5b57e8", accentSoft: "#6360f0", pos: "#0d9666", neg: "#dc344e", warn: "#c4840e",
+    bg: "#e2e6ed", card: "#eff2f6", cardHover: "#e6eaf0", border: "#ced5e0", grid: "#e0e5ec",
+    ink: "#1e2736", muted: "#4d586a", faint: "#758093",
+    accent: "#5854d6", accentSoft: "#635fe4", pos: "#0e8c60", neg: "#ce344a", warn: "#b4780e",
   },
 };
 

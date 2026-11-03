@@ -37,7 +37,8 @@ def replay(db: Session, trade: Trade, tz: str, before_h: float = 3, after_h: flo
 
     candles = [
         {"time": _local_epoch(b.ts, zone), "open": float(b.open), "high": float(b.high),
-         "low": float(b.low), "close": float(b.close)}
+         "low": float(b.low), "close": float(b.close),
+         "volume": float(b.volume) if b.volume is not None else 0.0}
         for b in bars
     ]
 

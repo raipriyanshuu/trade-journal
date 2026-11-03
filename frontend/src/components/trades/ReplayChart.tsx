@@ -6,6 +6,12 @@ import { Link } from "react-router-dom";
 import { api, ReplayData } from "../../lib/api";
 import { useTheme } from "../../lib/theme";
 
+/** "#22c58b" -> "rgba(34,197,139,a)" */
+function alpha(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 const LINE_STYLES = [LineStyle.Solid, LineStyle.Dotted, LineStyle.Dashed];
 
 export default function ReplayChart({ tradeId }: { tradeId: number }) {
@@ -59,8 +65,23 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
       upColor: c.pos, downColor: c.neg, borderVisible: false,
       wickUpColor: c.pos, wickDownColor: c.neg,
     });
-    const candles = data.candles.map((c) => ({ ...c, time: c.time as UTCTimestamp }));
+    const candles = data.candles.map((k) => ({
+      time: k.time as UTCTimestamp, open: k.open, high: k.high, low: k.low, close: k.close,
+    }));
     series.setData(candles);
+
+    // Volume bars along the bottom (own scale), when the data has volume.
+    if (data.candles.some((k) => (k.volume ?? 0) > 0)) {
+      series.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.24 } });
+      const vol = chart.addHistogramSeries({
+        priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false,
+      });
+      chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+      vol.setData(data.candles.map((k) => ({
+        time: k.time as UTCTimestamp, value: k.volume ?? 0,
+        color: alpha(k.close >= k.open ? c.pos : c.neg, 0.55),
+      })));
+    }
 
     // Snap each fill onto the candle that contains it (markers need a data point).
     const times = candles.map((c) => c.time as number);

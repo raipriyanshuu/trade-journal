@@ -22,22 +22,23 @@
   --tj-scroll-hover: 47 58 78;
 }
 :root[data-theme="light"] {
+  /* Soft light: muted blue-grey page, off-white cards, no pure white (less glare). */
   color-scheme: light;
-  --tj-bg: 244 246 251;
-  --tj-bg-soft: 236 240 246;
-  --tj-card: 255 255 255;
-  --tj-card-hover: 241 244 249;
-  --tj-card-border: 223 228 238;
-  --tj-ink: 17 24 39;
-  --tj-ink-muted: 75 85 99;
-  --tj-ink-faint: 128 138 156;
-  --tj-accent: 91 87 232;
-  --tj-accent-soft: 99 96 240;
-  --tj-pos: 13 150 102;
-  --tj-neg: 220 52 78;
-  --tj-warn: 196 132 14;
-  --tj-scroll: 205 212 224;
-  --tj-scroll-hover: 175 184 199;
+  --tj-bg: 226 230 237;
+  --tj-bg-soft: 219 224 232;
+  --tj-card: 239 242 246;
+  --tj-card-hover: 230 234 240;
+  --tj-card-border: 206 213 224;
+  --tj-ink: 30 39 54;
+  --tj-ink-muted: 77 88 106;
+  --tj-ink-faint: 117 128 147;
+  --tj-accent: 88 84 214;
+  --tj-accent-soft: 99 95 228;
+  --tj-pos: 14 140 96;
+  --tj-neg: 206 52 74;
+  --tj-warn: 180 120 14;
+  --tj-scroll: 190 198 211;
+  --tj-scroll-hover: 162 172 188;
 }
 /* Chip text shades tuned for dark backgrounds need more contrast on light ones. */
 :root[data-theme="light"] .text-sky-300 { color: #0369a1; }

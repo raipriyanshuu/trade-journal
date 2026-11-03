@@ -169,7 +169,7 @@ export interface ReplayData {
   trade_id: number;
   symbol: string;
   timeframe: string | null;
-  candles: { time: number; open: number; high: number; low: number; close: number }[];
+  candles: { time: number; open: number; high: number; low: number; close: number; volume?: number }[];
   fills: {
     time: number; price: number; side: string; quantity: string; is_entry: boolean;
     matched: boolean | null; bar_low: number | null; bar_high: number | null; missed?: boolean;
