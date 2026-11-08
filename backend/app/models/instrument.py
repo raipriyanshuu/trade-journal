@@ -11,6 +11,8 @@ from app.models.base import Base, TimestampMixin
 from app.types import DecimalText
 
 QUANTITY_UNITS = ("lots", "units")
+# The journal is split into two separate books: futures and options.
+SEGMENTS = ("futures", "options")
 
 
 class Instrument(Base, TimestampMixin):
@@ -29,6 +31,11 @@ class Instrument(Base, TimestampMixin):
     lot_size: Mapped[Decimal] = mapped_column(DecimalText, nullable=False, default=Decimal("1"))
 
     asset_class: Mapped[str] = mapped_column(String, nullable=False, default="other")
+    # futures | options. Options instruments are logged like futures (premium
+    # prices, lots); the Futures / Options tab shows one book at a time.
+    segment: Mapped[str] = mapped_column(
+        String, nullable=False, default="futures", server_default="futures", index=True
+    )
     # Default quantity unit for imports of this instrument.
     quantity_unit: Mapped[str] = mapped_column(String, nullable=False, default="lots")
 

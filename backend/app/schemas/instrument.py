@@ -19,6 +19,7 @@ class InstrumentRead(ORMModel):
     tick_size: DecimalStr
     lot_size: DecimalStr
     asset_class: str
+    segment: str = "futures"
     quantity_unit: str
     session_timezone: str
     session_definitions: dict
@@ -35,6 +36,7 @@ class InstrumentCreate(ORMModel):
     tick_size: DecimalStr
     lot_size: DecimalStr = Decimal("1")
     asset_class: str = "other"
+    segment: str = "futures"
     quantity_unit: str = "lots"
     session_timezone: str = "America/New_York"
     session_definitions: dict = Field(default_factory=dict)
@@ -48,6 +50,7 @@ class InstrumentUpdate(ORMModel):
     tick_size: DecimalStr | None = None
     lot_size: DecimalStr | None = None
     asset_class: str | None = None
+    segment: str | None = None
     quantity_unit: str | None = None
     session_timezone: str | None = None
     session_definitions: dict | None = None

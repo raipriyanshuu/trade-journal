@@ -13,7 +13,7 @@ def test_list_and_verify_instrument(client):
     r = client.get("/api/instruments")
     assert r.status_code == 200
     insts = r.json()
-    assert len(insts) == 16
+    assert len(insts) == 20  # 16 futures + 4 options
     assert all(i["verified"] is False for i in insts)
 
     es = next(i for i in insts if i["symbol_root"] == "ES")

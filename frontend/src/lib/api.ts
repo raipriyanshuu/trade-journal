@@ -10,6 +10,7 @@ export interface Instrument {
   tick_size: string;
   lot_size: string;
   asset_class: string;
+  segment: "futures" | "options";
   quantity_unit: string;
   session_timezone: string;
   session_definitions: Record<string, unknown>;
@@ -332,8 +333,25 @@ export interface PlaybookDetail extends Playbook {
   trades: TradeSummary[];
 }
 
+// Futures / Options book: read-only views of trades are scoped to it.
+let SEGMENT = "futures";
+export function setApiSegment(s: string) { SEGMENT = s; }
+export const currentSegment = () => SEGMENT;
+const SCOPED = [
+  /^\/api\/analytics\/(dashboard|calendar|breakdown)/,
+  /^\/api\/mistakes\/(analytics|drilldown)/,
+  /^\/api\/trades(\?|$)/,
+  /^\/api\/review\/mae-mfe/,
+  /^\/api\/reports(\?|$)/,
+  /^\/api\/playbooks(\/\d+)?(\?|$)/,
+];
+function scoped(path: string, options?: RequestInit): string {
+  if ((options?.method ?? "GET") !== "GET" || !SCOPED.some((r) => r.test(path))) return path;
+  return `${path}${path.includes("?") ? (path.endsWith("?") ? "" : "&") : "?"}segment=${SEGMENT}`;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(scoped(path, options), {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
@@ -520,7 +538,7 @@ export const api = {
   },
   aiReview: (body: { period: string; anchor: string; account_id?: number; currency?: string; style?: string; include_demo?: boolean }) =>
     request<{ model: string; review: string; truncated: boolean; input_tokens: number; output_tokens: number }>(
-      "/api/reports/ai-review", { method: "POST", body: JSON.stringify(body) }),
+      "/api/reports/ai-review", { method: "POST", body: JSON.stringify({ ...body, segment: SEGMENT }) }),
   estimateCharges: (body: { instrument_id: number; direction: string; entries: { price: string; quantity: string }[]; exits: { price: string; quantity: string }[] }) =>
     request<Record<string, string | boolean>>("/api/charges/estimate", { method: "POST", body: JSON.stringify(body) }),
   getMistakeRules: () => request<{ rules: Record<string, any>; explanations: Record<string, string> }>("/api/mistakes/rules"),

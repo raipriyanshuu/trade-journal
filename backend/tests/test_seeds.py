@@ -8,7 +8,7 @@ from app.models import Instrument, Setting, Tag
 
 def test_seed_counts(db):
     result = seed_all(db)
-    assert result["instruments"] == len(INSTRUMENT_SEEDS) == 16
+    assert result["instruments"] == len(INSTRUMENT_SEEDS) == 20  # 16 futures + 4 options
     assert result["mistake_tags"] == len(MISTAKE_TAG_SEEDS) == 13
     assert result["settings"] >= 5
 
@@ -17,7 +17,7 @@ def test_seed_is_idempotent(db):
     seed_all(db)
     second = seed_all(db)
     assert second == {"instruments": 0, "settings": 0, "mistake_tags": 0, "taxonomy": 0}
-    assert db.query(Instrument).count() == 16
+    assert db.query(Instrument).count() == 20
 
 
 def test_seeded_instruments_are_unverified(db):

@@ -74,6 +74,7 @@ def list_playbooks(
     date_to: date | None = None,
     account_id: int | None = None,
     include_demo: bool = True,
+    segment: str | None = None,
 ) -> list[dict]:
     q = select(Playbook).order_by(Playbook.archived, Playbook.name)
     if not include_archived:
@@ -81,7 +82,7 @@ def list_playbooks(
     pbs = db.scalars(q).all()
     by_pb: dict[int, list[Trade]] = defaultdict(list)
     for t in filtered_trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                             include_demo=include_demo):
+                             include_demo=include_demo, segment=segment):
         if t.playbook_id is not None:
             by_pb[t.playbook_id].append(t)
     return [{**serialize_playbook(pb), "stats": playbook_stats(pb, by_pb.get(pb.id, []))} for pb in pbs]
@@ -102,10 +103,11 @@ def create_playbook(p: PlaybookIn, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/api/playbooks/{pid}")
 def get_playbook(pid: int, db: Session = Depends(get_db), include_demo: bool = True,
-                 date_from: date | None = None, date_to: date | None = None) -> dict:
+                 date_from: date | None = None, date_to: date | None = None,
+                 segment: str | None = None) -> dict:
     pb = _get(db, pid)
     trades = filtered_trades(db, playbook=str(pid), include_demo=include_demo,
-                             date_from=date_from, date_to=date_to)
+                             date_from=date_from, date_to=date_to, segment=segment)
     uses = rule_use_counts(db, pb)
     out = serialize_playbook(pb)
     for r in out["rules"]:

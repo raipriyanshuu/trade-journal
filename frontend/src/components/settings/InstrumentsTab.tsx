@@ -58,6 +58,7 @@ export default function InstrumentsTab() {
               <tr className="text-left text-ink-faint border-b border-card-border">
                 <th className="px-3 py-2 font-medium">Symbol</th>
                 <th className="px-3 py-2 font-medium">Name</th>
+                <th className="px-3 py-2 font-medium">Book</th>
                 <th className="px-3 py-2 font-medium">Exch</th>
                 <th className="px-3 py-2 font-medium">Ccy</th>
                 <th className="px-3 py-2 font-medium text-right">Point value</th>
@@ -74,6 +75,11 @@ export default function InstrumentsTab() {
                 <tr key={r.id} className="border-b border-card-border/50 hover:bg-card-hover">
                   <td className="px-3 py-2 font-mono font-medium">{r.symbol_root}</td>
                   <td className="px-3 py-2 text-ink-muted">{r.display_name}</td>
+                  <td className="px-3 py-2">
+                    <span className={`badge ${r.segment === "options" ? "bg-violet-500/15 text-violet-300" : "bg-sky-500/15 text-sky-300"}`}>
+                      {r.segment === "options" ? "Options" : "Futures"}
+                    </span>
+                  </td>
                   <td className="px-3 py-2">{r.exchange}</td>
                   <td className="px-3 py-2">{r.currency}</td>
                   <td className="px-3 py-2 text-right font-mono">{r.point_value}</td>
@@ -151,6 +157,7 @@ function EditInstrumentModal({
       await api.updateInstrument(instrument.id, {
         display_name: form.display_name,
         exchange: form.exchange,
+        segment: form.segment,
         currency: form.currency,
         point_value: form.point_value,
         tick_size: form.tick_size,
@@ -192,6 +199,18 @@ function EditInstrumentModal({
             value={form.display_name}
             onChange={(e) => set("display_name", e.target.value)}
           />
+        </div>
+        <div className="col-span-2">
+          <label className="label">Book</label>
+          <div className="flex gap-1">
+            {(["futures", "options"] as const).map((s) => (
+              <button key={s} type="button" onClick={() => set("segment", s)}
+                className={`btn flex-1 !py-1.5 text-xs ${form.segment === s ? "bg-accent/25 text-ink" : "bg-card-hover text-ink-faint"}`}>
+                {s === "futures" ? "Futures" : "Options"}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-ink-faint mt-1">Options: price = premium, point value = premium multiplier per lot (e.g. Nifty 65).</p>
         </div>
         <div>
           <label className="label">Exchange</label>

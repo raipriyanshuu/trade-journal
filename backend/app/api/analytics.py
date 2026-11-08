@@ -42,10 +42,11 @@ def dashboard(
     currency: str | None = None,
     style: str | None = None,
     playbook: str | None = None,
+    segment: str | None = None,
     include_demo: bool = True,
 ):
     trades = _trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                     instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, include_demo=include_demo)
+                     instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, segment=segment, include_demo=include_demo)
     return analytics.dashboard(trades)
 
 
@@ -57,10 +58,11 @@ def calendar(
     currency: str | None = None,
     style: str | None = None,
     playbook: str | None = None,
+    segment: str | None = None,
     include_demo: bool = True,
 ):
     trades = _trades(db, account_id=account_id, instrument_id=instrument_id,
-                     currency=currency, style=style, playbook=playbook, include_demo=include_demo)
+                     currency=currency, style=style, playbook=playbook, segment=segment, include_demo=include_demo)
     return analytics.calendar(trades)
 
 
@@ -75,10 +77,11 @@ def breakdown(
     currency: str | None = None,
     style: str | None = None,
     playbook: str | None = None,
+    segment: str | None = None,
     include_demo: bool = True,
 ):
     trades = _trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                     instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, include_demo=include_demo)
+                     instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, segment=segment, include_demo=include_demo)
     return analytics.breakdown(db, trades, dimension, _tz(db))
 
 

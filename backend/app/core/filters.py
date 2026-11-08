@@ -7,7 +7,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Trade
+from app.models import Instrument, Trade
 from app.models.tag import trade_tags
 
 
@@ -35,9 +35,17 @@ def where_playbook(stmt, playbook: str | None):
         return stmt.where(Trade.id.is_(None))  # unknown value: match nothing
 
 
+def where_segment(stmt, segment: str | None):
+    """Futures or options book (by the trade's instrument); None = both."""
+    if not segment:
+        return stmt
+    return stmt.where(Trade.instrument_id.in_(select(Instrument.id).where(Instrument.segment == segment)))
+
+
 def filtered_trades(
     db: Session,
     *,
+    segment: str | None = None,
     style: str | None = None,
     playbook: str | None = None,
     date_from: date | None = None,
@@ -54,7 +62,7 @@ def filtered_trades(
     include_approx: bool = True,
     include_pnl_only: bool = True,
 ) -> list[Trade]:
-    stmt = where_playbook(where_style(select(Trade), style), playbook)
+    stmt = where_segment(where_playbook(where_style(select(Trade), style), playbook), segment)
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:

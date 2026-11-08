@@ -350,6 +350,20 @@ its own database file `data/backtest.db`, its own candle store and API.
 
 ---
 
+## Futures / Options books ✅
+
+- A **Futures | Options** switch at the top of every journal page. Each book is
+  separate: trade log, Trading Day table, dashboard, calendar, breakdowns,
+  mistakes, reports, MAE/MFE and playbook stats only use that book's trades.
+- Options instruments (seeded): Nifty 50 Options (65/lot), MCX Crude Oil
+  Options (100), Crude Oil Mini Options (10), Gold Mini Options (10). Logged
+  exactly like futures: price = premium, quantity = lots; no strike/expiry.
+- Options charges estimate (NSE / MCX premium rates, unverified, editable).
+- Any instrument can be moved between books in Settings → Instruments.
+- **132 backend tests passing.**
+
+---
+
 ## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.

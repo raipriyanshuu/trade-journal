@@ -70,7 +70,7 @@ const NOTION_HINTS: Record<string, RegExp> = {
 const TZ = ["America/New_York", "Asia/Kolkata", "America/Chicago", "Europe/London", "UTC"];
 
 export default function ImportWizard({ onImported }: { onImported: () => void }) {
-  const { accounts, instruments } = useReference();
+  const { accounts, instruments } = useReference({ allBooks: true });
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, string>[]>([]);

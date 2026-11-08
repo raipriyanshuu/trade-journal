@@ -89,10 +89,11 @@ def mae_mfe(
     currency: str | None = None,
     style: str | None = None,
     playbook: str | None = None,
+    segment: str | None = None,
     include_demo: bool = True,
 ):
     trades = filtered_trades(db, date_from=date_from, date_to=date_to, account_id=account_id,
-                             instrument_id=instrument_id, currency=currency, style=style, playbook=playbook,
+                             instrument_id=instrument_id, currency=currency, style=style, playbook=playbook, segment=segment,
                              include_demo=include_demo)
     return excursions.analytics(db, trades, adverse_r)
 
@@ -105,6 +106,7 @@ class ReportRequest(BaseModel):
     currency: str | None = None
     style: str | None = None
     playbook: str | None = None
+    segment: str | None = None
     include_demo: bool = True
 
 
@@ -116,18 +118,19 @@ def report(
     currency: str | None = None,
     style: str | None = None,
     playbook: str | None = None,
+    segment: str | None = None,
     include_demo: bool = True,
     db: Session = Depends(get_db),
 ):
     if period not in ("week", "month"):
         raise HTTPException(422, "period must be 'week' or 'month'")
-    return build_report(db, period, anchor, account_id, currency, include_demo, style, playbook)
+    return build_report(db, period, anchor, account_id, currency, include_demo, style, playbook, segment)
 
 
 @router.post("/reports/ai-review")
 def report_ai_review(payload: ReportRequest, db: Session = Depends(get_db)):
     rep = build_report(db, payload.period, payload.anchor, payload.account_id,
-                       payload.currency, payload.include_demo, payload.style, payload.playbook)
+                       payload.currency, payload.include_demo, payload.style, payload.playbook, payload.segment)
     try:
         return ai_review(rep, _setting(db, "ai_review", {}))
     except AIReviewError as exc:
@@ -153,14 +156,17 @@ def charges_estimate(payload: ChargeRequest, db: Session = Depends(get_db)):
     if inst is None:
         raise HTTPException(404, "Instrument not found")
     cfg_all = _setting(db, "india_charges", {})
-    cfg = cfg_all.get(inst.exchange)
+    key = f"{inst.exchange}_OPT" if inst.segment == "options" else inst.exchange
+    from app.seeds import OPTION_CHARGES
+
+    cfg = cfg_all.get(key) or OPTION_CHARGES.get(key)  # older settings lack the options schedules
     if inst.currency != "INR" or not cfg:
-        raise HTTPException(422, f"No Indian charge schedule for {inst.exchange}")
+        raise HTTPException(422, f"No Indian charge schedule for {key}")
     pv = Decimal(inst.point_value)
     entry_vals = [leg.price * pv * leg.quantity for leg in payload.entries]
     exit_vals = [leg.price * pv * leg.quantity for leg in payload.exits]
     buys, sells = (entry_vals, exit_vals) if payload.direction == "long" else (exit_vals, entry_vals)
     result = estimate(cfg, buys, sells)
     result["verified"] = bool(cfg_all.get("verified"))
-    result["exchange_name"] = inst.exchange
+    result["exchange_name"] = f"{inst.exchange} options" if inst.segment == "options" else inst.exchange
     return result

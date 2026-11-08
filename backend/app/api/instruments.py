@@ -8,10 +8,16 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Instrument
+from app.models.instrument import SEGMENTS
 from app.schemas.instrument import InstrumentCreate, InstrumentRead, InstrumentUpdate
 
 router = APIRouter(prefix="/api/instruments", tags=["instruments"])
 
+
+
+def _check_segment(segment: str | None) -> None:
+    if segment not in SEGMENTS:
+        raise HTTPException(422, "segment must be 'futures' or 'options'")
 
 @router.get("", response_model=list[InstrumentRead])
 def list_instruments(include_inactive: bool = True, db: Session = Depends(get_db)):
@@ -25,6 +31,7 @@ def list_instruments(include_inactive: bool = True, db: Session = Depends(get_db
 def create_instrument(payload: InstrumentCreate, db: Session = Depends(get_db)):
     if db.scalar(select(Instrument).where(Instrument.symbol_root == payload.symbol_root)):
         raise HTTPException(409, f"Instrument {payload.symbol_root} already exists")
+    _check_segment(payload.segment)
     inst = Instrument(**payload.model_dump())
     # A user-created instrument is considered verified by the user.
     inst.verified = True
@@ -47,7 +54,10 @@ def update_instrument(instrument_id: int, payload: InstrumentUpdate, db: Session
     inst = db.get(Instrument, instrument_id)
     if inst is None:
         raise HTTPException(404, "Instrument not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    if "segment" in data:
+        _check_segment(data["segment"])
+    for field, value in data.items():
         setattr(inst, field, value)
     db.commit()
     db.refresh(inst)

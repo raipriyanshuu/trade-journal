@@ -13,7 +13,7 @@ const FIELDS: [string, string, RegExp][] = [
 const TZ = ["America/New_York", "America/Chicago", "Asia/Kolkata", "Europe/London", "UTC"];
 
 export default function BarImport() {
-  const { instruments } = useReference();
+  const { instruments } = useReference({ allBooks: true });
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [map, setMap] = useState<Record<string, string>>({});

@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.filters import where_playbook, where_style
+from app.core.filters import where_playbook, where_segment, where_style
 from app.core.market_data import auto_fetch_trade
 from app.core.mistakes import recompute_for_account
 from app.core.playbooks import PlaybookError, set_trade_playbook
@@ -62,11 +62,12 @@ def list_trades(
     tag_id: int | None = None,
     style: str | None = None,
     playbook: str | None = None,
+    segment: str | None = None,
     include_demo: bool = True,
     sort_by: str = "open_time",
     order: str = "desc",
 ):
-    stmt = where_playbook(where_style(select(Trade), style), playbook)
+    stmt = where_segment(where_playbook(where_style(select(Trade), style), playbook), segment)
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:

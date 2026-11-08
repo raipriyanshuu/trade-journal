@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ConfigProvider } from "./lib/config";
 import { ThemeProvider } from "./lib/theme";
+import { SegmentProvider } from "./lib/segment";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -11,7 +12,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <ThemeProvider>
         <ConfigProvider>
-          <App />
+          <SegmentProvider>
+            <App />
+          </SegmentProvider>
         </ConfigProvider>
       </ThemeProvider>
     </BrowserRouter>

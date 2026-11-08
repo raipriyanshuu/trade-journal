@@ -62,10 +62,22 @@ MCX_SESSION = {
 }
 
 
+# Options charges are on premium turnover; brokerage is a flat fee per order.
+OPTION_CHARGES = {
+    "NSE_OPT": {"brokerage_per_order": "20", "brokerage_pct": "100", "stt_sell_pct": "0.1",
+                "exchange_pct": "0.03503", "sebi_per_crore": "10", "stamp_buy_pct": "0.003",
+                "gst_pct": "18"},
+    "MCX_OPT": {"brokerage_per_order": "20", "brokerage_pct": "100", "stt_sell_pct": "0.05",
+                "exchange_pct": "0.0418", "sebi_per_crore": "10", "stamp_buy_pct": "0.003",
+                "gst_pct": "18"},
+}
+
+
 def _inst(
-    symbol, name, exchange, currency, pv, tick, lot, asset, qty_unit, tz, session
+    symbol, name, exchange, currency, pv, tick, lot, asset, qty_unit, tz, session, segment="futures"
 ) -> dict:
     return dict(
+        segment=segment,
         symbol_root=symbol,
         display_name=name,
         exchange=exchange,
@@ -101,6 +113,12 @@ INSTRUMENT_SEEDS = [
     _inst("SILVER", "MCX Silver (30 kg)", "MCX", "INR", "30", "1", "30", "metal", "lots", "Asia/Kolkata", MCX_SESSION),
     _inst("SILVERM", "MCX Silver Mini", "MCX", "INR", "5", "1", "5", "metal", "lots", "Asia/Kolkata", MCX_SESSION),
     _inst("NATURALGAS", "MCX Natural Gas", "MCX", "INR", "1250", "0.10", "1250", "energy", "lots", "Asia/Kolkata", MCX_SESSION),
+    # Options (the Options book). Logged like futures: price = premium, quantity =
+    # lots; point value = premium multiplier per lot. No strike/expiry is tracked.
+    _inst("NIFTY-OPT", "Nifty 50 Options", "NSE", "INR", "65", "0.05", "65", "equity_index", "lots", "Asia/Kolkata", NSE_SESSION, "options"),
+    _inst("CRUDEOIL-OPT", "MCX Crude Oil Options", "MCX", "INR", "100", "0.10", "100", "energy", "lots", "Asia/Kolkata", MCX_SESSION, "options"),
+    _inst("CRUDEOILM-OPT", "MCX Crude Oil Mini Options", "MCX", "INR", "10", "0.05", "10", "energy", "lots", "Asia/Kolkata", MCX_SESSION, "options"),
+    _inst("GOLDM-OPT", "MCX Gold Mini Options", "MCX", "INR", "10", "0.50", "10", "metal", "lots", "Asia/Kolkata", MCX_SESSION, "options"),
 ]
 
 
@@ -136,6 +154,7 @@ DEFAULT_SETTINGS = {
         "MCX": {"brokerage_per_order": "20", "brokerage_pct": "0.03", "stt_sell_pct": "0.01",
                 "exchange_pct": "0.0021", "sebi_per_crore": "10", "stamp_buy_pct": "0.002",
                 "gst_pct": "18"},
+        **OPTION_CHARGES,
     },
     # Optional AI weekly review (off by default; network call to the Claude API).
     "ai_review": {"enabled": False, "api_key": "", "model": "claude-opus-5-5"},
