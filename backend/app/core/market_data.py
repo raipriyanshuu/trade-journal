@@ -107,10 +107,17 @@ def fetch_yahoo(symbol: str, start: datetime, end: datetime, interval: str,
     return out
 
 
-def trade_window(trade: Trade) -> tuple[datetime, datetime]:
+def trade_window(trade: Trade, inst: Instrument | None = None) -> tuple[datetime, datetime]:
+    """From the trading-day start (so session VWAP is exact) or 3h before entry,
+    whichever is earlier, to 2h after the exit."""
     end_anchor = trade.close_time or trade.open_time
     end = min(end_anchor + WINDOW_AFTER, datetime.now(timezone.utc))
-    return trade.open_time - WINDOW_BEFORE, end
+    start = trade.open_time - WINDOW_BEFORE
+    if inst is not None:
+        from app.core.sessions import trading_day_start_utc
+
+        start = min(start, trading_day_start_utc(trade.trading_date, inst))
+    return start, end
 
 
 def _covered(db: Session, instrument_id: int, timeframe: str, start: datetime, end: datetime) -> bool:
@@ -140,7 +147,7 @@ def fetch_for_trade(db: Session, trade: Trade, force: bool = False, fetcher=fetc
     if not trade.time_known:
         raise MarketDataError("This trade has an approximate time, so a chart window can't be placed.")
 
-    start, end = trade_window(trade)
+    start, end = trade_window(trade, inst)
     age = datetime.now(timezone.utc) - start
     if age <= ONE_MIN_MAX_AGE:
         interval = "1m"
@@ -157,9 +164,12 @@ def fetch_for_trade(db: Session, trade: Trade, force: bool = False, fetcher=fetc
     if not raw:
         raise MarketDataError("Yahoo returned no bars for this time window (market closed?).")
 
+    # Yahoo can return bars a little outside the requested window, so look up what
+    # is already stored across everything it returned (avoids duplicate bars).
+    lo, hi = min(r["ts"] for r in raw), max(r["ts"] for r in raw)
     existing = set(
         db.scalars(select(Bar.ts).where(
-            Bar.instrument_id == inst.id, Bar.timeframe == interval, Bar.ts >= start, Bar.ts <= end,
+            Bar.instrument_id == inst.id, Bar.timeframe == interval, Bar.ts >= lo, Bar.ts <= hi,
         ))
     )
     tick = Decimal(inst.tick_size)
@@ -178,8 +188,15 @@ def fetch_for_trade(db: Session, trade: Trade, force: bool = False, fetcher=fetc
     return {"status": "fetched", "symbol": symbol, "timeframe": interval, "added": added}
 
 
-def backfill(db: Session, days: int = 59, fetcher=fetch_yahoo) -> dict:
-    """Fetch charts for every recent CME trade that doesn't have bars yet."""
+def _has_bars(db: Session, trade: Trade) -> bool:
+    end = trade.close_time or trade.open_time
+    return db.scalar(select(func.count()).select_from(Bar).where(
+        Bar.instrument_id == trade.instrument_id, Bar.ts >= trade.open_time - timedelta(minutes=5),
+        Bar.ts <= end)) > 0
+
+
+def backfill(db: Session, days: int = 59, fetcher=fetch_yahoo, only_missing: bool = False) -> dict:
+    """Fetch charts for recent CME trades (only those with no bars yet if only_missing)."""
     cfg = get_config(db)
     if not cfg.get("enabled"):
         raise MarketDataError("Delayed charts are turned off. Enable them in Settings → Market data.")
@@ -189,6 +206,8 @@ def backfill(db: Session, days: int = 59, fetcher=fetch_yahoo) -> dict:
         select(Trade).where(Trade.open_time >= since, Trade.instrument_id.in_(supported),
                             Trade.time_known.is_(True)).order_by(Trade.open_time)
     ).all()
+    if only_missing:
+        trades = [t for t in trades if not _has_bars(db, t)]
     summary = {"trades": len(trades), "fetched": 0, "cached": 0, "failed": 0, "errors": []}
     for t in trades:
         try:
@@ -216,3 +235,20 @@ def auto_fetch_trade(trade_id: int) -> None:
             fetch_for_trade(db, trade)
         except MarketDataError:
             pass  # the trade page offers a manual "Fetch chart" with the reason
+
+
+def startup_catch_up() -> None:
+    """Run once at startup (background thread): fetch charts for recent trades that
+    have none or only part of their session, while Yahoo still has the data (~29
+    days for 1m, ~59 for 5m). Complete charts are skipped without a network call.
+    Stored bars are kept forever, so a trade's chart never disappears later."""
+    from app.db import SessionLocal
+
+    try:
+        with SessionLocal() as db:
+            if get_config(db).get("enabled"):
+                res = backfill(db)
+                if res["trades"]:
+                    print(f"[charts] startup catch-up: {res}")
+    except Exception as exc:  # noqa: BLE001 - never break startup over charts
+        print(f"[charts] startup catch-up failed: {exc}")

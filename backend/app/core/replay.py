@@ -16,13 +16,44 @@ from sqlalchemy.orm import Session
 from app.core.bars import bars_between
 from app.core.excursions import excursion
 from app.core.market_data import get_config, yahoo_symbol
+from app.core.sessions import trading_date_for, trading_day_start_utc
 from app.models import DailySession, Instrument, Trade
-from app.models.bar import TIMEFRAMES
+from app.models.bar import TIMEFRAMES, Bar
 
 
 def _local_epoch(ts: datetime, zone: ZoneInfo) -> int:
     offset = ts.astimezone(zone).utcoffset() or timedelta(0)
     return int(ts.timestamp() + offset.total_seconds())
+
+
+def _session_vwap(db: Session, trade: Trade, inst: Instrument | None, tf: str | None, bars: list,
+                  end: datetime, zone: ZoneInfo) -> tuple[list[dict], bool]:
+    """Session VWAP (resets each trading day) for the displayed bars, computed from
+    the trading-day start when those bars are stored (typical price x volume)."""
+    if not bars or inst is None or tf is None:
+        return [], False
+    anchor = trading_day_start_utc(trade.trading_date, inst)
+    calc = bars
+    if anchor < bars[0].ts:
+        calc = list(db.scalars(
+            select(Bar).where(Bar.instrument_id == inst.id, Bar.timeframe == tf,
+                              Bar.ts >= anchor, Bar.ts <= end).order_by(Bar.ts)
+        ))
+    if not calc or all(not b.volume for b in calc):
+        return [], False
+    full = calc[0].ts <= anchor + timedelta(seconds=TIMEFRAMES.get(tf, 60))
+    shown = {b.ts for b in bars}
+    out, day, pv, v = [], None, 0.0, 0.0
+    for b in calc:
+        d = trading_date_for(b.ts, inst)
+        if d != day:
+            day, pv, v = d, 0.0, 0.0
+        w = float(b.volume or 0)
+        pv += (float(b.high) + float(b.low) + float(b.close)) / 3 * w
+        v += w
+        if v > 0 and b.ts in shown:
+            out.append({"time": _local_epoch(b.ts, zone), "value": round(pv / v, 4)})
+    return out, full
 
 
 def replay(db: Session, trade: Trade, tz: str, before_h: float = 3, after_h: float = 2) -> dict:
@@ -34,6 +65,8 @@ def replay(db: Session, trade: Trade, tz: str, before_h: float = 3, after_h: flo
     end = end_anchor + timedelta(hours=after_h)
     tf, bars = bars_between(db, trade.instrument_id, start, end)
     sources = sorted({b.source for b in bars})
+
+    vwap, vwap_full = _session_vwap(db, trade, inst, tf, bars, end, zone)
 
     candles = [
         {"time": _local_epoch(b.ts, zone), "open": float(b.open), "high": float(b.high),
@@ -130,6 +163,10 @@ def replay(db: Session, trade: Trade, tz: str, before_h: float = 3, after_h: flo
         "fills": fills,
         "fill_warnings": warnings,
         "lines": lines,
+        "vwap": vwap,
+        # False when the stored bars start after the session open, so VWAP is
+        # anchored at the first bar we have instead.
+        "vwap_from_session_open": vwap_full,
         "excursion": excursion(db, trade, inst),
         "tz": tz,
         # Whether a delayed Yahoo chart could be fetched for this instrument.

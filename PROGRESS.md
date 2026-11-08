@@ -364,6 +364,20 @@ its own database file `data/backtest.db`, its own candle store and API.
 
 ---
 
+## Chart drawings, session VWAP, day screenshots ✅
+
+- Trade replay chart: drawing tools (trend line, horizontal line, box, circle,
+  eraser, colours, undo/clear), saved per trade and kept through rebuilds;
+  session VWAP toggle (anchored at the trading-day start).
+- Charts are fetched for the whole session, kept forever once stored; a startup
+  catch-up fetches missing/partial charts for recent trades while Yahoo still
+  has them (1m ~29 days, 5m ~59 days). Fixed duplicate-bar error on refetch.
+- Trading Day: instrument filter (separate plan + trades per instrument) and
+  pre-market chart screenshots (upload or Ctrl+V), shown again in Review.
+- **139 backend tests passing.**
+
+---
+
 ## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.

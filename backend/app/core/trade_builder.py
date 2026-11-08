@@ -55,6 +55,7 @@ _META_FIELDS = (
     "outcome",
     "style",
     "playbook_id",
+    "drawings",
 )
 
 

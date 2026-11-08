@@ -37,6 +37,12 @@ async def lifespan(_app: FastAPI):
         snapshot("startup", min_interval_hours=6, db=backtest_db_path(), prefix="backtest")
     except Exception as exc:  # noqa: BLE001 - a failed backup must not block the app
         print(f"[backup] startup snapshot failed: {exc}")
+    # Charts: fetch any recent trade's missing chart in the background.
+    import threading
+
+    from app.core.market_data import startup_catch_up
+
+    threading.Thread(target=startup_catch_up, daemon=True).start()
     # Backtest store: its own file, data/backtest.db (tables created if missing).
     init_backtest_db()
     # Seed instrument master, default settings and mistake tags if missing.

@@ -156,7 +156,7 @@ export default function TradeDetail() {
         {/* Left: executions */}
         <div className="lg:col-span-2 space-y-4">
           <Section title="Replay">
-            <ReplayChart tradeId={trade.id} />
+            <ReplayChart tradeId={trade.id} drawings={trade.drawings} />
           </Section>
 
           <Section title="Executions">

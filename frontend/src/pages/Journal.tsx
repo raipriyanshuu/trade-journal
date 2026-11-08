@@ -6,6 +6,7 @@ import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, localInputToUtcIso, pnlColor, utcIsoToLocalInput } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
 import ScrollX from "../components/ScrollX";
+import DayScreenshots from "../components/journal/DayScreenshots";
 import { PlaybookBadge } from "../components/playbooks/shared";
 import {
   GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, StyleBadge, TagChips,
@@ -30,8 +31,8 @@ function prettyDay(day: string): string {
   return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short", year: "numeric" });
 }
 
-const blank = (date: string, accountId: number | null): Partial<DailySession> => ({
-  trading_date: date, account_id: accountId, levels: [], scenarios: [], news_events: [], readiness: [],
+const blank = (date: string, accountId: number | null, instrumentId: number | null = null): Partial<DailySession> => ({
+  trading_date: date, account_id: accountId, instrument_id: instrumentId, levels: [], scenarios: [], news_events: [], readiness: [],
   htf_read: "", market_context: "", what_to_repeat: "", what_to_change: "", key_lesson: "", focus_tomorrow: "",
 });
 
@@ -39,9 +40,11 @@ export default function Journal() {
   const nav = useNavigate();
   const [params] = useSearchParams();
   const { tz } = useConfig();
-  const { accounts } = useReference();
+  const { accounts, instruments } = useReference();
   const [date, setDate] = useState(params.get("date") || isoDay(new Date()));
   const [accountId, setAccountId] = useState<number | null>(params.get("account") ? Number(params.get("account")) : null);
+  // A separate plan (and trade list) per instrument; "All" = the general day plan.
+  const [instrumentId, setInstrumentId] = useState<number | null>(params.get("instrument") ? Number(params.get("instrument")) : null);
   const [form, setForm] = useState<Partial<DailySession>>(blank(date, accountId));
   const [prev, setPrev] = useState<DailySession | null>(null);
   const [template, setTemplate] = useState<string[]>([]);
@@ -57,19 +60,20 @@ export default function Journal() {
   }, []);
 
   const loadTrades = useCallback(() => {
-    api.listTrades({ date_from: date, date_to: date, account_id: accountId ?? undefined, sort_by: "open_time", order: "asc" })
+    api.listTrades({ date_from: date, date_to: date, account_id: accountId ?? undefined,
+      instrument_id: instrumentId ?? undefined, sort_by: "open_time", order: "asc" })
       .then(setTrades);
-  }, [date, accountId]);
+  }, [date, accountId, instrumentId]);
 
   useEffect(() => {
     setDirty(false);
     setSavedAt(null);
-    Promise.all([api.getJournal(date, accountId), api.previousJournal(date, accountId)]).then(([cur, p]) => {
-      setForm(cur ?? blank(date, accountId));
+    Promise.all([api.getJournal(date, accountId, instrumentId), api.previousJournal(date, accountId, instrumentId)]).then(([cur, p]) => {
+      setForm(cur ?? blank(date, accountId, instrumentId));
       setPrev(p);
     });
     loadTrades();
-  }, [date, accountId, loadTrades]);
+  }, [date, accountId, instrumentId, loadTrades]);
 
   const readiness = useMemo(() => {
     const saved = form.readiness ?? [];
@@ -82,17 +86,23 @@ export default function Journal() {
     setDirty(true);
   }
 
-  async function save() {
+  async function save(): Promise<DailySession> {
     setSaving(true);
     try {
-      const saved = await api.upsertJournal({ ...(form as DailySession), readiness, trading_date: date, account_id: accountId });
+      const saved = await api.upsertJournal({
+        ...(form as DailySession), readiness, trading_date: date, account_id: accountId, instrument_id: instrumentId,
+      } as DailySession);
       setForm(saved);
       setDirty(false);
       setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      return saved;
     } finally {
       setSaving(false);
     }
   }
+
+  // Screenshots need a saved day to attach to.
+  const ensureSession = async () => (form.id ? form.id : (await save()).id);
 
   async function goStep(s: Step) {
     if (dirty) await save();
@@ -135,7 +145,12 @@ export default function Journal() {
             <option value="">All accounts</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}{a.is_demo ? " (demo)" : ""}</option>)}
           </select>
-          <button className="btn-primary" onClick={save} disabled={saving}>
+          <select className="input !w-auto" value={instrumentId ?? ""} title="Plan and trades for one instrument"
+            onChange={(e) => setInstrumentId(e.target.value ? Number(e.target.value) : null)}>
+            <option value="">All instruments</option>
+            {instruments.map((i) => <option key={i.id} value={i.id}>{i.symbol_root} &middot; {i.display_name}</option>)}
+          </select>
+          <button className="btn-primary" onClick={() => save()} disabled={saving}>
             {saving ? "Saving…" : dirty ? "Save" : "Saved"}
           </button>
         </div>
@@ -163,7 +178,8 @@ export default function Journal() {
       </div>
 
       {step === "plan" && (
-        <PlanStep form={form} set={set} readiness={readiness} prev={prev} date={date} tz={tz} onCopyPrev={copyPrevLevels} />
+        <PlanStep form={form} set={set} readiness={readiness} prev={prev} date={date} tz={tz} onCopyPrev={copyPrevLevels}
+          screenshots={<DayScreenshots sessionId={form.id} ensureSession={ensureSession} />} />
       )}
 
       {step === "execute" && (
@@ -184,7 +200,13 @@ export default function Journal() {
         </div>
       )}
 
-      {step === "review" && <ReviewStep form={form} set={set} trades={trades} />}
+      {step === "review" && (
+        <div className="space-y-4">
+          <ReviewStep form={form} set={set} trades={trades} />
+          <DayScreenshots sessionId={form.id} ensureSession={ensureSession} title="Your pre-market charts"
+            hint="Compare what you marked before the open with what the market did. Paste more with Ctrl+V." />
+        </div>
+      )}
 
       {logMode && (
         <ManualTradeForm initialMode={logMode} defaultAccountId={accountId} defaultDate={date}
@@ -197,7 +219,7 @@ export default function Journal() {
 
 /* ----------------------------- Plan ----------------------------- */
 
-function PlanStep({ form, set, readiness, prev, date, tz, onCopyPrev }: {
+function PlanStep({ form, set, readiness, prev, date, tz, onCopyPrev, screenshots }: {
   form: Partial<DailySession>;
   set: <K extends keyof DailySession>(k: K, v: DailySession[K]) => void;
   readiness: { label: string; done: boolean }[];
@@ -205,6 +227,7 @@ function PlanStep({ form, set, readiness, prev, date, tz, onCopyPrev }: {
   date: string;
   tz: string;
   onCopyPrev: () => void;
+  screenshots: React.ReactNode;
 }) {
   const levels = form.levels ?? [];
   const scenarios = (form.scenarios as unknown as Scenario[]) ?? [];
@@ -287,6 +310,7 @@ function PlanStep({ form, set, readiness, prev, date, tz, onCopyPrev }: {
       </div>
 
       <div className="space-y-4">
+        {screenshots}
         <Card title={`Readiness · ${readyCount}/${readiness.length}`}>
           <div className="h-1.5 rounded bg-card-border mb-3 overflow-hidden">
             <div className="h-full bg-pos transition-all" style={{ width: `${readiness.length ? (readyCount / readiness.length) * 100 : 0}%` }} />

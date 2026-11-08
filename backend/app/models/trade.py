@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, DemoMixin, TimestampMixin
@@ -106,6 +106,8 @@ class Trade(Base, TimestampMixin, DemoMixin):
     style: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     # Playbook (strategy) this trade belongs to; the rules followed are in
     # trade_rule_checks. Deleting a playbook leaves its trades unassigned.
+    # Chart drawings on the replay (lines, boxes, circles) in price/time coordinates.
+    drawings: Mapped[list | None] = mapped_column(JSON, nullable=True)
     playbook_id: Mapped[int | None] = mapped_column(
         ForeignKey("playbooks.id", ondelete="SET NULL"), nullable=True, index=True
     )

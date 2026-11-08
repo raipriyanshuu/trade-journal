@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ColorType, createChart, CrosshairMode, LineStyle, SeriesMarkerPosition, SeriesMarkerShape, UTCTimestamp,
+  ColorType, createChart, CrosshairMode, IChartApi, ISeriesApi, LineStyle, SeriesMarkerPosition, SeriesMarkerShape,
+  UTCTimestamp,
 } from "lightweight-charts";
 import { Link } from "react-router-dom";
 import { api, ReplayData } from "../../lib/api";
 import { useTheme } from "../../lib/theme";
+import ChartDrawings, { DRAW_COLORS, Drawing, Tool } from "./ChartDrawings";
 
 /** "#22c58b" -> "rgba(34,197,139,a)" */
 function alpha(hex: string, a: number): string {
@@ -14,7 +16,20 @@ function alpha(hex: string, a: number): string {
 
 const LINE_STYLES = [LineStyle.Solid, LineStyle.Dotted, LineStyle.Dashed];
 
-export default function ReplayChart({ tradeId }: { tradeId: number }) {
+const TOOLS: { key: Tool; label: string; title: string }[] = [
+  { key: "cursor", label: "↖", title: "Move / zoom the chart" },
+  { key: "line", label: "╱", title: "Trend line (drag)" },
+  { key: "hline", label: "—", title: "Horizontal line (click)" },
+  { key: "box", label: "▭", title: "Box (drag)" },
+  { key: "circle", label: "◯", title: "Circle (drag)" },
+  { key: "erase", label: "⌫", title: "Eraser: click a drawing to delete it" },
+];
+
+function readVwapPref(): boolean {
+  try { return localStorage.getItem("tj.replay.vwap") !== "0"; } catch { return true; }
+}
+
+export default function ReplayChart({ tradeId, drawings: initial = [] }: { tradeId: number; drawings?: Drawing[] }) {
   const el = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<ReplayData | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -22,6 +37,30 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
   const [fetchErr, setFetchErr] = useState<string | null>(null);
   const autoTried = useRef(false);
   const { c } = useTheme();
+  const [chartApi, setChartApi] = useState<{ chart: IChartApi; series: ISeriesApi<"Candlestick"> } | null>(null);
+  const [tool, setTool] = useState<Tool>("cursor");
+  const [color, setColor] = useState(DRAW_COLORS[0]);
+  const [drawings, setDrawings] = useState<Drawing[]>(initial);
+  const [showVwap, setShowVwap] = useState(readVwapPref);
+  const saveTimer = useRef<number | undefined>(undefined);
+  const [saveState, setSaveState] = useState<"" | "saving" | "saved" | "error">("");
+
+  useEffect(() => { setDrawings(initial); }, [tradeId]);
+
+  function changeDrawings(next: Drawing[]) {
+    setDrawings(next);
+    setSaveState("saving");
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      api.saveDrawings(tradeId, next).then(() => setSaveState("saved")).catch(() => setSaveState("error"));
+    }, 400);
+  }
+
+  function toggleVwap() {
+    const v = !showVwap;
+    setShowVwap(v);
+    try { localStorage.setItem("tj.replay.vwap", v ? "1" : "0"); } catch { /* storage unavailable */ }
+  }
 
   const load = () => api.replay(tradeId).then(setData).catch((e) => setErr((e as Error).message));
 
@@ -69,6 +108,15 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
       time: k.time as UTCTimestamp, open: k.open, high: k.high, low: k.low, close: k.close,
     }));
     series.setData(candles);
+
+    // Session VWAP (anchored at the trading-day start when the bars cover it).
+    if (showVwap && data.vwap?.length) {
+      const vw = chart.addLineSeries({
+        color: c.warn, lineWidth: 2, lastValueVisible: true, priceLineVisible: false,
+        crosshairMarkerVisible: false, title: "VWAP",
+      });
+      vw.setData(data.vwap.map((p) => ({ time: p.time as UTCTimestamp, value: p.value })));
+    }
 
     // Volume bars along the bottom (own scale), when the data has volume.
     if (data.candles.some((k) => (k.volume ?? 0) > 0)) {
@@ -129,8 +177,12 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
       });
     }
     chart.timeScale().fitContent();
-    return () => chart.remove();
-  }, [data, c]);
+    setChartApi({ chart, series });
+    return () => {
+      setChartApi(null);
+      chart.remove();
+    };
+  }, [data, c, showVwap]);
 
   if (err) return <p className="text-neg text-sm">{err}</p>;
   if (!data) return <p className="text-ink-faint text-sm">Loading chart&hellip;</p>;
@@ -165,7 +217,38 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
   const fromYahoo = data.sources.includes("yahoo");
   return (
     <div>
-      <div ref={el} className="h-[380px] w-full rounded-lg overflow-hidden" />
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+        <div className="flex p-0.5 bg-bg-soft rounded-lg border border-card-border">
+          {TOOLS.map((t) => (
+            <button key={t.key} title={t.title} aria-label={t.title} onClick={() => setTool(t.key)}
+              className={`w-8 h-7 rounded-md text-sm leading-none ${tool === t.key ? "bg-accent/25 text-ink" : "text-ink-muted hover:text-ink"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 px-1">
+          {DRAW_COLORS.map((col) => (
+            <button key={col} aria-label={`Colour ${col}`} onClick={() => setColor(col)}
+              className={`w-4 h-4 rounded-full ${color === col ? "ring-2 ring-offset-1 ring-offset-card ring-ink" : ""}`}
+              style={{ background: col }} />
+          ))}
+        </div>
+        <button className="btn-ghost !py-1 !px-2 text-xs" disabled={!drawings.length} onClick={() => changeDrawings(drawings.slice(0, -1))}>Undo</button>
+        <button className="btn-ghost !py-1 !px-2 text-xs" disabled={!drawings.length}
+          onClick={() => confirm("Remove all drawings on this chart?") && changeDrawings([])}>Clear</button>
+        <button onClick={toggleVwap} title={data.vwap_from_session_open === false ? "VWAP from the first bar shown (session start not stored)" : "Session VWAP"}
+          className={`btn !py-1 !px-2.5 text-xs ${showVwap ? "bg-warn/15 text-warn" : "bg-card-hover text-ink-faint"}`}>
+          VWAP{showVwap && data.vwap_from_session_open === false ? "*" : ""}
+        </button>
+        <span className="text-[11px] text-ink-faint ml-auto">
+          {saveState === "saving" ? "saving…" : saveState === "saved" ? "drawings saved" : saveState === "error" ? "couldn't save drawings" : ""}
+        </span>
+      </div>
+      <div className="relative h-[380px] w-full rounded-lg overflow-hidden">
+        <div ref={el} className="absolute inset-0" />
+        <ChartDrawings chart={chartApi?.chart ?? null} series={chartApi?.series ?? null}
+          times={data.candles.map((k) => k.time)} drawings={drawings} onChange={changeDrawings} tool={tool} color={color} />
+      </div>
       {data.fill_warnings.length > 0 && (
         <div className="mt-3 rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm">
           <div className="font-medium text-warn mb-1">&#9888; Fill prices don&rsquo;t match the chart at the logged times</div>
@@ -177,6 +260,7 @@ export default function ReplayChart({ tradeId }: { tradeId: number }) {
       )}
       <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-sm">
         <span className="text-ink-faint">
+          {showVwap && data.vwap_from_session_open === false && <>VWAP* from the first bar shown &middot; </>}
           {data.timeframe} bars &middot; times in {data.tz}
           {fromYahoo && <> &middot; Yahoo Finance (delayed, continuous front-month)</>}
           {data.can_fetch && data.fetch_enabled && (

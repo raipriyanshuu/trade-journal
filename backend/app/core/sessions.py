@@ -65,3 +65,12 @@ def minutes_since_session_open(dt_utc: datetime, instrument: Instrument) -> floa
     open_utc = session_open_utc(td, instrument)
     delta = (dt_utc - open_utc).total_seconds() / 60.0
     return delta
+
+
+def trading_day_start_utc(trading_date: date, instrument: Instrument) -> datetime:
+    """UTC start of the trading day (CME: 18:00 New York the evening before; NSE/MCX: the open)."""
+    sd = instrument.session_definitions or {}
+    tz = ZoneInfo(instrument.session_timezone)
+    start_t = _parse_hhmm(sd.get("trading_day_start"), sd.get("regular_start") or "09:30")
+    day = trading_date + timedelta(days=int(sd.get("trading_day_start_offset_days", 0) or 0))
+    return datetime.combine(day, start_t, tzinfo=tz).astimezone(ZoneInfo("UTC"))

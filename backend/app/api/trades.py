@@ -174,6 +174,29 @@ def set_styles(payload: StylesUpdate, db: Session = Depends(get_db)) -> list[str
     return get_styles(db)
 
 
+class DrawingsIn(BaseModel):
+    drawings: list[dict]
+
+
+DRAWING_TYPES = {"line", "box", "circle", "hline"}
+
+
+@router.put("/{trade_id}/drawings")
+def save_drawings(trade_id: int, payload: DrawingsIn, db: Session = Depends(get_db)) -> dict:
+    """Lines / boxes / circles drawn on the trade's replay chart."""
+    trade = _get_trade_or_404(db, trade_id)
+    if len(payload.drawings) > 300:
+        raise HTTPException(422, "Too many drawings on one chart")
+    clean = []
+    for d in payload.drawings:
+        if d.get("type") not in DRAWING_TYPES:
+            raise HTTPException(422, f"Unknown drawing type: {d.get('type')}")
+        clean.append({k: d[k] for k in ("id", "type", "t1", "p1", "t2", "p2", "color") if k in d})
+    trade.drawings = clean
+    db.commit()
+    return {"drawings": clean}
+
+
 @router.get("/{trade_id}", response_model=TradeDetail)
 def get_trade(trade_id: int, db: Session = Depends(get_db)):
     return serialize_detail(db, _get_trade_or_404(db, trade_id))

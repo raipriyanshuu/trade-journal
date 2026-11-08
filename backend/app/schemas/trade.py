@@ -172,5 +172,6 @@ class TradeDetail(TradeSummary):
     notes: str
     currency: str
     checked_rule_ids: list[int] = []
+    drawings: list[dict] = []
     executions: list[ExecutionRead] = []
     attachments: list[AttachmentRead] = []

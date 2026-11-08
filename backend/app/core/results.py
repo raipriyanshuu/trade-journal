@@ -121,6 +121,7 @@ def serialize_detail(db: Session, trade: Trade) -> dict:
             "entry_location": trade.entry_location,
             "notes": trade.notes,
             "checked_rule_ids": [r.id for r in trade.checked_rules],
+            "drawings": trade.drawings or [],
             "executions": sorted(trade.executions, key=lambda e: (e.timestamp, e.id)),
             "attachments": trade.attachments if hasattr(trade, "attachments") else [],
         }

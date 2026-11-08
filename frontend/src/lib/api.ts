@@ -176,6 +176,8 @@ export interface ReplayData {
     matched: boolean | null; bar_low: number | null; bar_high: number | null; missed?: boolean;
   }[];
   fill_warnings: string[];
+  vwap: { time: number; value: number }[];
+  vwap_from_session_open: boolean;
   lines: { price: number; title: string; color: string; style: number }[];
   excursion: Excursion | null;
   tz: string;
@@ -192,6 +194,7 @@ export interface TradeDetail extends TradeSummary {
   entry_location: string;
   notes: string;
   checked_rule_ids: number[];
+  drawings: { id: string; type: "line" | "hline" | "box" | "circle"; t1: number; p1: number; t2?: number; p2?: number; color: string }[];
   executions: ExecutionRow[];
   attachments: AttachmentRow[];
 }
@@ -558,6 +561,8 @@ export const api = {
     return request<TradeSummary[]>(`/api/trades${q ? `?${q}` : ""}`);
   },
   getTrade: (id: number) => request<TradeDetail>(`/api/trades/${id}`),
+  saveDrawings: (id: number, drawings: TradeDetail["drawings"]) =>
+    request<{ drawings: TradeDetail["drawings"] }>(`/api/trades/${id}/drawings`, { method: "PUT", body: JSON.stringify({ drawings }) }),
   createManualTrade: (payload: ManualTradePayload) =>
     request<TradeDetail>("/api/trades/manual", { method: "POST", body: JSON.stringify(payload) }),
   updateTrade: (id: number, patch: Partial<ManualTradePayload> & { pnl_only?: boolean; outcome?: string | null }) =>
@@ -611,6 +616,14 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file, filename);
     const res = await fetch(`/api/trades/${tradeId}/attachments`, { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`${res.status}: upload failed`);
+    return res.json() as Promise<AttachmentRow>;
+  },
+  listJournalAttachments: (sessionId: number) => request<AttachmentRow[]>(`/api/journal/${sessionId}/attachments`),
+  uploadJournalAttachment: async (sessionId: number, file: File | Blob, filename = "paste.png") => {
+    const fd = new FormData();
+    fd.append("file", file, filename);
+    const res = await fetch(`/api/journal/${sessionId}/attachments`, { method: "POST", body: fd });
     if (!res.ok) throw new Error(`${res.status}: upload failed`);
     return res.json() as Promise<AttachmentRow>;
   },
