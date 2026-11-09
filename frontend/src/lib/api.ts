@@ -113,6 +113,7 @@ export interface TradeSummary {
   htf_alignment: string | null;
   partial_profit: boolean;
   style: string | null; // Scalp / Intraday / Swing / Positional / custom
+  option_type: "call" | "put" | null; // options book: always bought
   playbook: { id: number; name: string; color: string } | null;
   rules_followed: number | null;
   rules_total: number | null;
@@ -137,6 +138,7 @@ export interface JournalFields {
   style?: string | null;
   playbook_id?: number | null;
   rule_ids?: number[];
+  option_type?: "call" | "put" | null;
 }
 
 export interface MissedTradePayload extends JournalFields {
@@ -276,6 +278,7 @@ export interface TradeFilters {
   tag_id?: number;
   style?: string; // a style name, or UNASSIGNED_STYLE
   playbook?: string; // playbook id, or "none"
+  option_type?: string; // call | put
   include_demo?: boolean;
   sort_by?: string;
   order?: string;

@@ -7,7 +7,7 @@ import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFil
 const DIM_LABELS: Record<string, string> = {
   style: "Style (scalp / swing...)",
   playbook: "Playbook",
-  instrument: "Instrument", account: "Account", direction: "Direction",
+  instrument: "Instrument", account: "Account", direction: "Direction (long/short · call/put)",
   session_time: "Time in session", clock_time: "Clock time (IST)", weekday: "Day of week",
   setup_tag: "Trade type", location: "Entry location", probability: "Probability", thesis: "What happened",
   entry_quality: "Entry quality", exit_quality: "Exit quality", htf_alignment: "HTF alignment",

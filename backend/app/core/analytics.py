@@ -45,10 +45,11 @@ def dashboard(trades: list[Trade]) -> dict:
     for label, lo, hi in buckets:
         r_dist.append({"bucket": label, "count": sum(1 for r in rs if lo <= r < hi)})
 
-    # Win/loss by direction.
+    # Win/loss by side (long / short, or call / put in the options book).
     wl = []
-    for direction in ("long", "short"):
-        sub = [t for t in closed if t.direction == direction]
+    sides = [s for s in ("long", "short", "call", "put") if any(t.side_label == s for t in closed)] or ["long", "short"]
+    for direction in sides:
+        sub = [t for t in closed if t.side_label == direction]
         wins = sum(1 for t in sub if Decimal(t.net_pnl) > 0)
         losses = sum(1 for t in sub if Decimal(t.net_pnl) < 0)
         net = sum((Decimal(t.net_pnl) for t in sub), ZERO)
@@ -193,7 +194,7 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
         if dimension == "account":
             return [t.account.name if t.account else "?"]
         if dimension == "direction":
-            return [t.direction]
+            return [t.side_label]
         if dimension == "scenario":
             return [t.scenario]
         if dimension == "planned":
@@ -226,7 +227,7 @@ def breakdown(db: Session, trades: list[Trade], dimension: str, tz: str) -> list
         if dimension == "with_htf":
             if not t.htf_alignment or t.htf_alignment == "range":
                 return [t.htf_alignment or "(unset)"]
-            aligned = (t.htf_alignment == "bullish") == (t.direction == "long")
+            aligned = (t.htf_alignment == "bullish") == (t.bias_direction == "long")
             return ["with HTF" if aligned else "against HTF"]
         if dimension == "atr_used":
             if t.dtr is None or not t.atr:

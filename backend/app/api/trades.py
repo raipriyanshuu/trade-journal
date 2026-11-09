@@ -63,6 +63,7 @@ def list_trades(
     style: str | None = None,
     playbook: str | None = None,
     segment: str | None = None,
+    option_type: str | None = None,
     include_demo: bool = True,
     sort_by: str = "open_time",
     order: str = "desc",
@@ -78,6 +79,8 @@ def list_trades(
         stmt = stmt.where(Trade.instrument_id == instrument_id)
     if direction:
         stmt = stmt.where(Trade.direction == direction)
+    if option_type:
+        stmt = stmt.where(Trade.option_type == option_type)
     if status:
         stmt = stmt.where(Trade.status == status)
     if scenario:
@@ -205,6 +208,7 @@ def get_trade(trade_id: int, db: Session = Depends(get_db)):
 @router.post("/manual", response_model=TradeDetail, status_code=201)
 def create_manual(payload: ManualTradeCreate, background: BackgroundTasks, db: Session = Depends(get_db)):
     _check_playbook(db, payload)
+    _check_option(db, payload)
     acc = db.get(Account, payload.account_id)
     if acc is None:
         raise HTTPException(404, "Account not found")
@@ -289,6 +293,7 @@ def _apply_journal_fields(db: Session, trade: Trade, payload) -> None:
     trade.behaviour = payload.behaviour
     trade.partial_profit = payload.partial_profit
     trade.style = normalize_style(db, payload.style)
+    trade.option_type = payload.option_type
 
 
 @router.post("/missed", response_model=TradeDetail, status_code=201)
@@ -297,6 +302,7 @@ def create_missed(payload: MissedTradeCreate, background: BackgroundTasks, db: S
     from app.core.sessions import trading_date_for
 
     _check_playbook(db, payload)
+    _check_option(db, payload)
     acc = db.get(Account, payload.account_id)
     inst = db.get(Instrument, payload.instrument_id)
     if acc is None or inst is None:
@@ -329,6 +335,21 @@ def create_missed(payload: MissedTradeCreate, background: BackgroundTasks, db: S
     db.commit()
     background.add_task(auto_fetch_trade, trade.id)  # chart of the setup you missed
     return serialize_detail(db, _get_trade_or_404(db, trade.id))
+
+
+OPTION_TYPES = ("call", "put")
+
+
+def _check_option(db: Session, payload) -> None:
+    """Call/put only on options instruments; an option is always bought (long)."""
+    if payload.option_type is None:
+        return
+    if payload.option_type not in OPTION_TYPES:
+        raise HTTPException(422, "option_type must be 'call' or 'put'")
+    inst = db.get(Instrument, payload.instrument_id)
+    if inst is not None and inst.segment != "options":
+        raise HTTPException(422, "Call/put is only for options instruments")
+    payload.direction = "long"
 
 
 def _check_playbook(db: Session, payload) -> None:
@@ -364,6 +385,11 @@ def update_trade(trade_id: int, payload: TradeUpdate, db: Session = Depends(get_
     tag_ids = data.pop("tag_ids", None)
     if "style" in data:
         data["style"] = normalize_style(db, data["style"])
+    if data.get("option_type") is not None:
+        if data["option_type"] not in OPTION_TYPES:
+            raise HTTPException(422, "option_type must be 'call' or 'put'")
+        if trade.instrument and trade.instrument.segment != "options":
+            raise HTTPException(422, "Call/put is only for options instruments")
     for field, value in data.items():
         setattr(trade, field, value)
     if tag_ids is not None:

@@ -80,3 +80,45 @@ def test_segment_editable_and_validated(client):
     inst = _inst(client, "SILVERM")
     assert client.patch(f"/api/instruments/{inst['id']}", json={"segment": "options"}).json()["segment"] == "options"
     assert client.patch(f"/api/instruments/{inst['id']}", json={"segment": "bonds"}).status_code == 422
+
+
+def test_call_and_put_are_bought_and_bias_is_by_type(client):
+    acc = client.post("/api/accounts", json={"name": "CP", "currency": "INR"}).json()
+    crude = _inst(client, "CRUDEOIL-OPT")
+    call = _trade(client, acc, crude, "100", "120", option_type="call", htf_alignment="bullish")
+    # A put asked for as "short" is still a bought option; premium up = profit.
+    put = _trade(client, acc, crude, "80", "95", day="2026-11-04", direction="short",
+                 option_type="put", htf_alignment="bearish")
+    assert call["option_type"] == "call" and call["direction"] == "long"
+    assert put["option_type"] == "put" and put["direction"] == "long"
+    assert Decimal(put["net_pnl"]) == 15 * 100  # bought the put, premium rose
+
+    rows = {r["key"]: r for r in client.get("/api/analytics/breakdown",
+                                            params={"dimension": "direction", "segment": "options"}).json()}
+    assert set(rows) == {"call", "put"}
+    htf = {r["key"]: r["trades"] for r in client.get("/api/analytics/breakdown",
+                                                     params={"dimension": "with_htf", "segment": "options"}).json()}
+    assert htf == {"with HTF": 2}  # call + bullish, put + bearish are both with the trend
+
+    assert len(client.get("/api/trades", params={"option_type": "put"}).json()) == 1
+
+
+def test_call_put_only_on_options_and_editable(client):
+    acc = client.post("/api/accounts", json={"name": "CP2", "currency": "INR"}).json()
+    r = client.post("/api/trades/manual", json={
+        "account_id": acc["id"], "instrument_id": _inst(client, "CRUDEOIL")["id"], "direction": "long",
+        "option_type": "call", "entries": [{"time": "2026-11-03T05:00:00Z", "price": "6000", "quantity": "1"}],
+    })
+    assert r.status_code == 422
+    t = _trade(client, acc, _inst(client, "NIFTY-OPT"), "100", "90", option_type="call")
+    assert client.patch(f"/api/trades/{t['id']}", json={"option_type": "put"}).json()["option_type"] == "put"
+    assert client.patch(f"/api/trades/{t['id']}", json={"option_type": "straddle"}).status_code == 422
+
+
+def test_put_on_an_up_trend_day_is_flagged(client):
+    acc = client.post("/api/accounts", json={"name": "CP3", "currency": "INR"}).json()
+    client.put("/api/journal", json={"trading_date": "2026-11-03", "account_id": acc["id"],
+                                     "actual_day_type": "Trend up"})
+    t = _trade(client, acc, _inst(client, "NIFTY-OPT"), "100", "90", option_type="put")
+    flags = {f["rule_code"] for f in client.get("/api/mistakes/flags", params={"trade_id": t["id"]}).json()}
+    assert "FADED_TREND_DAY" in flags

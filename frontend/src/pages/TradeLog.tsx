@@ -8,7 +8,8 @@ import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
 import ScrollX from "../components/ScrollX";
 import { PlaybookBadge, usePlaybooks } from "../components/playbooks/shared";
-import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, StyleBadge, TagChips } from "../components/journal/Pickers";
+import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, SideBadge, sideOf, StyleBadge, TagChips } from "../components/journal/Pickers";
+import { useSegment } from "../lib/segment";
 
 type View = "journal" | "numbers";
 
@@ -41,6 +42,7 @@ export default function TradeLog() {
   const [newTagCat, setNewTagCat] = useState("setup");
   const { styles } = useStyles();
   const { playbooks } = usePlaybooks();
+  const { segment } = useSegment();
   const [bulkStyle, setBulkStyle] = useState("");
 
   async function applyBulkStyle() {
@@ -149,11 +151,19 @@ export default function TradeLog() {
           {styles.map((s) => <option key={s} value={s}>{s}</option>)}
           <option value={UNASSIGNED_STYLE}>Unassigned</option>
         </FilterSelect>
-        <FilterSelect label="Direction" value={filters.direction ?? ""} onChange={(v) => set("direction", v)}>
-          <option value="">All</option>
-          <option value="long">Long</option>
-          <option value="short">Short</option>
-        </FilterSelect>
+        {segment === "options" ? (
+          <FilterSelect label="Call / Put" value={filters.option_type ?? ""} onChange={(v) => set("option_type", v)}>
+            <option value="">All</option>
+            <option value="call">Call</option>
+            <option value="put">Put</option>
+          </FilterSelect>
+        ) : (
+          <FilterSelect label="Direction" value={filters.direction ?? ""} onChange={(v) => set("direction", v)}>
+            <option value="">All</option>
+            <option value="long">Long</option>
+            <option value="short">Short</option>
+          </FilterSelect>
+        )}
         <FilterSelect label="Result" value={filters.result ?? ""} onChange={(v) => set("result", v)}>
           <option value="">All</option>
           <option value="win">Win</option>
@@ -269,7 +279,7 @@ export default function TradeLog() {
                   <td className="px-3 py-2 font-mono">{t.max_position_size}</td>
                   <td className="px-3 py-2 text-ink-muted whitespace-nowrap">{t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}</td>
                   <td className="px-3 py-2 font-mono text-ink-muted">{t.dtr && t.atr ? `${Number(t.dtr)}/${Number(t.atr)}` : "—"}</td>
-                  <td className="px-3 py-2"><span className={`badge ${t.direction === "long" ? "bg-pos/15 text-pos" : "bg-neg/15 text-neg"}`}>{t.direction === "long" ? "Long" : "Short"}</span></td>
+                  <td className="px-3 py-2"><SideBadge trade={t} /></td>
                   <td className="px-3 py-2"><TagChips tags={t.tags} category="probability" /></td>
                   <td className="px-3 py-2"><TagChips tags={t.tags} category="thesis" /></td>
                   <td className="px-3 py-2"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
@@ -330,9 +340,7 @@ export default function TradeLog() {
                   </td>
                   <td className="px-3 py-2"><StyleBadge style={t.style} /></td>
                   <td className="px-3 py-2"><PlaybookBadge pb={t.playbook} followed={t.rules_followed} total={t.rules_total} /></td>
-                  <td className={`px-3 py-2 ${t.direction === "long" ? "text-pos" : "text-neg"}`}>
-                    {t.direction === "long" ? "Long" : "Short"}
-                  </td>
+                  <td className={`px-3 py-2 ${sideOf(t).bullish ? "text-pos" : "text-neg"}`}>{sideOf(t).label}</td>
                   <td className="px-3 py-2 text-right font-mono">{t.max_position_size}</td>
                   <td className="px-3 py-2 text-right font-mono">{t.avg_entry ?? "—"}</td>
                   <td className="px-3 py-2 text-right font-mono">{t.avg_exit ?? "—"}</td>

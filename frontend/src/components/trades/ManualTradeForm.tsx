@@ -6,6 +6,7 @@ import Modal from "../Modal";
 import { ChipPicker, GradePicker, HtfPicker, StylePicker } from "../journal/Pickers";
 import { lastStyleFor, rememberStyle } from "../../lib/useStyles";
 import { PlaybookPicker, usePlaybooks } from "../playbooks/shared";
+import { useSegment } from "../../lib/segment";
 
 interface Props {
   onClose: () => void;
@@ -36,6 +37,11 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
   const [accountId, setAccountId] = useState<number | "">(defaultAccountId ?? "");
   const [instrumentId, setInstrumentId] = useState<number | "">("");
   const [direction, setDirection] = useState<"long" | "short">("long");
+  // Options book: you always buy the option, so pick Call or Put instead of Long/Short.
+  const { segment } = useSegment();
+  const isOptions = segment === "options";
+  const side = isOptions ? "long" : direction; // a bought option is a long position
+  const [optionType, setOptionType] = useState<"call" | "put">("call");
   const [entries, setEntries] = useState<LegRow[]>([{ time: localInput(defaultDate), price: "", quantity: "1" }]);
   const [exits, setExits] = useState<LegRow[]>([{ time: localInput(defaultDate), price: "", quantity: "1" }]);
   const [missedTime, setMissedTime] = useState(localInput(defaultDate));
@@ -122,7 +128,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
     if (!instrument) return;
     try {
       const res = await api.estimateCharges({
-        instrument_id: instrument.id, direction,
+        instrument_id: instrument.id, direction: side,
         entries: entries.filter((r) => r.price).map((r) => ({ price: r.price, quantity: r.quantity })),
         exits: exits.filter((r) => r.price).map((r) => ({ price: r.price, quantity: r.quantity })),
       });
@@ -138,6 +144,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
     exit_quality: missed ? null : exitQ, htf_alignment: htf,
     context, behaviour, partial_profit: missed ? false : partial, style,
     playbook_id: playbookId, rule_ids: playbookId ? ruleIds : [],
+    option_type: isOptions ? optionType : null,
   };
 
   async function submit() {
@@ -151,7 +158,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
     try {
       if (missed) {
         const payload: MissedTradePayload = {
-          ...journal, account_id: Number(accountId), instrument_id: Number(instrumentId), direction,
+          ...journal, account_id: Number(accountId), instrument_id: Number(instrumentId), direction: side,
           time: localInputToUtcIso(missedTime), quantity: missedQty || "1",
           planned_entry: plannedEntry || null, initial_stop: stop || null, planned_target: target || null,
           scenario, notes, tag_ids: tagIds,
@@ -167,7 +174,7 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
         return;
       }
       const payload: ManualTradePayload = {
-        ...journal, account_id: Number(accountId), instrument_id: Number(instrumentId), direction,
+        ...journal, account_id: Number(accountId), instrument_id: Number(instrumentId), direction: side,
         entries: entryLegs, exits: toLegs(exits), fees: fees || "0",
         initial_stop: stop || null, planned_target: target || null, planned_risk_amount: plannedRisk || null,
         scenario, planned: planned === "" ? null : planned === "yes",
@@ -220,10 +227,19 @@ export default function ManualTradeForm({ onClose, onCreated, defaultAccountId, 
             </select>
           </div>
           <div className="col-span-2">
-            <label className="label">Direction</label>
+            <label className="label">{isOptions ? "Option (bought)" : "Direction"}</label>
             <div className="flex gap-1">
-              <button className={`btn flex-1 ${direction === "long" ? "bg-pos/20 text-pos" : "bg-card-hover text-ink-muted"}`} onClick={() => setDirection("long")}>Long</button>
-              <button className={`btn flex-1 ${direction === "short" ? "bg-neg/20 text-neg" : "bg-card-hover text-ink-muted"}`} onClick={() => setDirection("short")}>Short</button>
+              {isOptions ? (
+                <>
+                  <button className={`btn flex-1 ${optionType === "call" ? "bg-pos/20 text-pos" : "bg-card-hover text-ink-muted"}`} onClick={() => setOptionType("call")}>Call</button>
+                  <button className={`btn flex-1 ${optionType === "put" ? "bg-neg/20 text-neg" : "bg-card-hover text-ink-muted"}`} onClick={() => setOptionType("put")}>Put</button>
+                </>
+              ) : (
+                <>
+                  <button className={`btn flex-1 ${direction === "long" ? "bg-pos/20 text-pos" : "bg-card-hover text-ink-muted"}`} onClick={() => setDirection("long")}>Long</button>
+                  <button className={`btn flex-1 ${direction === "short" ? "bg-neg/20 text-neg" : "bg-card-hover text-ink-muted"}`} onClick={() => setDirection("short")}>Short</button>
+                </>
+              )}
             </div>
           </div>
         </div>

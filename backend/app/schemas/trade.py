@@ -44,6 +44,7 @@ class JournalFields(BaseModel):
     style: str | None = None
     playbook_id: int | None = None
     rule_ids: list[int] = []
+    option_type: str | None = None  # call | put (options book only)
 
 
 class ManualTradeCreate(JournalFields):
@@ -86,6 +87,7 @@ class MissedTradeCreate(JournalFields):
 
 
 class TradeUpdate(BaseModel):
+    option_type: str | None = None
     dtr: DecimalStr | None = None
     atr: DecimalStr | None = None
     entry_quality: str | None = None
@@ -148,6 +150,7 @@ class TradeSummary(ORMModel):
     htf_alignment: str | None = None
     partial_profit: bool = False
     style: str | None = None
+    option_type: str | None = None
     playbook: dict | None = None
     rules_followed: int | None = None
     rules_total: int | None = None

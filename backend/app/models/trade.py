@@ -106,6 +106,9 @@ class Trade(Base, TimestampMixin, DemoMixin):
     style: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     # Playbook (strategy) this trade belongs to; the rules followed are in
     # trade_rule_checks. Deleting a playbook leaves its trades unassigned.
+    # Options book: "call" or "put". Options are always bought, so the position
+    # (direction) stays "long"; the call/put decides the market bias.
+    option_type: Mapped[str | None] = mapped_column(String, nullable=True)
     # Chart drawings on the replay (lines, boxes, circles) in price/time coordinates.
     drawings: Mapped[list | None] = mapped_column(JSON, nullable=True)
     playbook_id: Mapped[int | None] = mapped_column(
@@ -121,3 +124,18 @@ class Trade(Base, TimestampMixin, DemoMixin):
     flags = relationship("MistakeFlag", foreign_keys="MistakeFlag.trade_id", viewonly=True, lazy="selectin")
     playbook = relationship("Playbook", lazy="selectin")
     checked_rules = relationship("PlaybookRule", secondary="trade_rule_checks", viewonly=True, lazy="selectin")
+
+
+    @property
+    def bias_direction(self) -> str:
+        """Which way the trade bets on the market: a put is bearish, a call bullish."""
+        if self.option_type == "put":
+            return "short"
+        if self.option_type == "call":
+            return "long"
+        return self.direction
+
+    @property
+    def side_label(self) -> str:
+        """call / put for options, long / short otherwise (for grouping and display)."""
+        return self.option_type or self.direction

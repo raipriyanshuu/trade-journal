@@ -360,6 +360,9 @@ its own database file `data/backtest.db`, its own candle store and API.
   exactly like futures: price = premium, quantity = lots; no strike/expiry.
 - Options charges estimate (NSE / MCX premium rates, unverified, editable).
 - Any instrument can be moved between books in Settings → Instruments.
+- Options are logged as **Call / Put** (always bought; stored as a long position
+  with `option_type`). Call = bullish, Put = bearish for HTF alignment, the
+  direction breakdown, win/loss by side and the trend-day / two-strikes rules.
 - **132 backend tests passing.**
 
 ---

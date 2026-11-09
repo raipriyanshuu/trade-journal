@@ -96,6 +96,7 @@ def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = Non
         "htf_alignment": trade.htf_alignment,
         "partial_profit": trade.partial_profit,
         "style": trade.style,
+        "option_type": trade.option_type,
         **_playbook_fields(trade),
         "outcome": trade.outcome,
         "pnl_known": trade.pnl_known,

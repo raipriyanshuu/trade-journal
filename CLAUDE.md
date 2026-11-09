@@ -104,6 +104,9 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   `scoped()` append `?segment=` to the read-only list/analytics GETs; Layout
   shows the switch and keys <Outlet> by segment. Options are plain instruments
   (point value = premium multiplier); no strike/expiry by design.
+  Options trades carry `option_type` call|put and `direction` stays "long"
+  (bought). Use `Trade.bias_direction` for market-bias logic and
+  `Trade.side_label` for grouping/display; frontend `sideOf()` in Pickers.tsx.
 - **Playbooks:** `models/playbook.py` (Playbook, PlaybookRule, `trade_rule_checks`),
   `trades.playbook_id` (SET NULL on delete). Logic + stats in `core/playbooks.py`
   (`sync_rules` keeps ids for edited rules, deletes removed ones), API in

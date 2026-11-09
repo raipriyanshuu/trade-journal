@@ -56,6 +56,7 @@ _META_FIELDS = (
     "style",
     "playbook_id",
     "drawings",
+    "option_type",
 )
 
 

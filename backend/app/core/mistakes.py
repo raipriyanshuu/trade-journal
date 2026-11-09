@@ -170,9 +170,9 @@ def _apply_day_rules(db, rules, account, day, day_trades, instruments, journal, 
         need = int(rules["TWO_STRIKES"].get("losses", 2))
         streak: dict[tuple, int] = defaultdict(int)
         for t in day_trades:
-            key = (t.instrument_id, t.direction)
+            key = (t.instrument_id, t.side_label)
             if streak[key] >= need:
-                flag(t.id, day, "TWO_STRIKES", f"After {streak[key]} losses in {t.direction}")
+                flag(t.id, day, "TWO_STRIKES", f"After {streak[key]} losses in {t.side_label}")
             if _is_loss(t):
                 streak[key] += 1
             elif _is_win(t):
@@ -238,10 +238,10 @@ def _apply_day_rules(db, rules, account, day, day_trades, instruments, journal, 
         if _enabled(rules, "FADED_TREND_DAY") and journal and journal.actual_day_type:
             dt = journal.actual_day_type.lower()
             if "trend" in dt:
-                if "up" in dt and t.direction == "short":
-                    flag(t.id, day, "FADED_TREND_DAY", "Short on an up-trend day")
-                elif "down" in dt and t.direction == "long":
-                    flag(t.id, day, "FADED_TREND_DAY", "Long on a down-trend day")
+                if "up" in dt and t.bias_direction == "short":
+                    flag(t.id, day, "FADED_TREND_DAY", f"{'Put' if t.option_type else 'Short'} on an up-trend day")
+                elif "down" in dt and t.bias_direction == "long":
+                    flag(t.id, day, "FADED_TREND_DAY", f"{'Call' if t.option_type else 'Long'} on a down-trend day")
 
     # HELD_LOSERS: day-level check on average holding times.
     if _enabled(rules, "HELD_LOSERS"):

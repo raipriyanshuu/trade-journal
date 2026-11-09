@@ -310,3 +310,17 @@ export function StylePicker({ value, onChange, label = "Style" }: {
     </div>
   );
 }
+
+/** Long / Short for futures; Call / Put for options (options are always bought). */
+export function sideOf(t: { direction: string; option_type?: string | null }) {
+  if (t.option_type === "call") return { label: "Call", short: "C", bullish: true };
+  if (t.option_type === "put") return { label: "Put", short: "P", bullish: false };
+  return t.direction === "long"
+    ? { label: "Long", short: "L", bullish: true }
+    : { label: "Short", short: "S", bullish: false };
+}
+
+export function SideBadge({ trade }: { trade: { direction: string; option_type?: string | null } }) {
+  const s = sideOf(trade);
+  return <span className={`badge ${s.bullish ? "bg-pos/15 text-pos" : "bg-neg/15 text-neg"}`}>{s.label}</span>;
+}

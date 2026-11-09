@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { sideOf } from "../components/journal/Pickers";
 import { useTheme } from "../lib/theme";
 import { useNavigate } from "react-router-dom";
 import {
@@ -256,7 +257,7 @@ function DrillModal({ drill, onClose, onOpen }: { drill: { type: string; trades:
                 <tr key={t.id} className="border-b border-card-border/40 hover:bg-card-hover cursor-pointer" onClick={() => onOpen(t.id)}>
                   <td className="px-3 py-2">{t.trading_date}</td>
                   <td className="px-3 py-2 font-mono">{t.symbol}</td>
-                  <td className={`px-3 py-2 ${t.direction === "long" ? "text-pos" : "text-neg"}`}>{t.direction}</td>
+                  <td className={`px-3 py-2 ${sideOf(t).bullish ? "text-pos" : "text-neg"}`}>{sideOf(t).label}</td>
                   <td className={`px-3 py-2 text-right font-mono ${Number(t.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{t.net_pnl} {t.currency}</td>
                 </tr>
               ))}

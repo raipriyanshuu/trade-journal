@@ -16,8 +16,9 @@ import Lightbox from "../components/Lightbox";
 import ReplayChart from "../components/trades/ReplayChart";
 import {
   CATEGORY_LABELS, ChipPicker, GradeBadge, GradePicker, HtfBadge, HtfPicker, JOURNAL_CATEGORIES, ResultBadge,
-  StylePicker, TagChips,
+  sideOf, StylePicker, TagChips,
 } from "../components/journal/Pickers";
+import { useSegment } from "../lib/segment";
 import EditableText from "../components/EditableText";
 import { PlaybookPicker, usePlaybooks } from "../components/playbooks/shared";
 
@@ -105,8 +106,8 @@ export default function TradeDetail() {
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-3">
             <span className="font-mono">{trade.symbol}</span>
-            <span className={trade.direction === "long" ? "text-pos" : "text-neg"}>
-              {trade.direction === "long" ? "Long" : "Short"}
+            <span className={sideOf(trade).bullish ? "text-pos" : "text-neg"}>
+              {sideOf(trade).label}
             </span>
             <span className="badge bg-card-border text-ink-muted">{trade.status}</span>
             {trade.is_demo && <span className="badge bg-accent/15 text-accent-soft">demo</span>}
@@ -427,6 +428,9 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
   const [context, setContext] = useState(trade.context);
   const [behaviour, setBehaviour] = useState(trade.behaviour);
   const [partial, setPartial] = useState(trade.partial_profit);
+  const { segment } = useSegment();
+  const isOption = !!trade.option_type || segment === "options";
+  const [optionType, setOptionType] = useState<"call" | "put" | null>(trade.option_type);
   const [style, setStyle] = useState<string | null>(trade.style);
   const [saving, setSaving] = useState(false);
   const toggleTag = (id: number) => setTagIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -444,6 +448,7 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
         behaviour,
         partial_profit: partial,
         style: style ?? "",
+        ...(isOption && optionType ? { option_type: optionType } : {}),
         initial_stop: stop || null,
         planned_target: target || null,
         planned_risk_amount: risk || null,
@@ -471,6 +476,19 @@ function TradeEditModal({ trade, onClose, onSaved }: { trade: TradeDetailT; onCl
       </>
     }>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        {isOption && (
+          <div>
+            <label className="label">Option</label>
+            <div className="flex gap-1">
+              {(["call", "put"] as const).map((o) => (
+                <button key={o} type="button" onClick={() => setOptionType(o)}
+                  className={`btn flex-1 !py-1 text-xs ${optionType === o ? (o === "call" ? "bg-pos/20 text-pos" : "bg-neg/20 text-neg") : "bg-card-hover text-ink-faint"}`}>
+                  {o === "call" ? "Call" : "Put"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <HtfPicker value={htf} onChange={setHtf} />
         <GradePicker label="Entry quality" value={entryQ} onChange={setEntryQ} />
         <GradePicker label="Exit quality" value={exitQ} onChange={setExitQ} />

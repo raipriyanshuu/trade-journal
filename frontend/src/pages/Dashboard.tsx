@@ -10,6 +10,7 @@ import { formatDuration, formatMoney, formatTimeOnly, pnlColor } from "../lib/fo
 import { styleTone } from "../lib/useStyles";
 import { Palette, useTheme } from "../lib/theme";
 import { useConfig } from "../lib/config";
+import { sideOf } from "../components/journal/Pickers";
 
 type Row = { key: string; trades: number; win_rate: number; net_pnl: string; avg_pnl: number; profit_factor: number | null; expectancy_r: number | null };
 type Cal = Record<string, { net: number; trades: number; win_rate: number }>;
@@ -378,7 +379,7 @@ function RecentTrades({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: stri
                 <td className="py-1.5 text-ink-muted text-xs">{t.trading_date.slice(5).replace("-", "/")} <span className="text-ink-faint">{t.time_known ? formatTimeOnly(t.open_time, tz) : ""}</span></td>
                 <td className="py-1.5">
                   <span className="font-mono font-semibold">{t.symbol}</span>{" "}
-                  <span className={`text-xs ${t.direction === "long" ? "text-pos" : "text-neg"}`}>{t.direction === "long" ? "L" : "S"}</span>
+                  <span className={`text-xs ${sideOf(t).bullish ? "text-pos" : "text-neg"}`}>{sideOf(t).short}</span>
                 </td>
                 <td className={`py-1.5 text-right font-mono ${t.pnl_known ? pnlColor(t.net_pnl) : "text-ink-faint"}`}>
                   {t.status === "open" ? "open" : t.pnl_known ? formatMoney(t.net_pnl, t.currency) : "label"}

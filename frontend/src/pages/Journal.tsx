@@ -9,7 +9,7 @@ import ScrollX from "../components/ScrollX";
 import DayScreenshots from "../components/journal/DayScreenshots";
 import { PlaybookBadge } from "../components/playbooks/shared";
 import {
-  GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, StyleBadge, TagChips,
+  GradeBadge, GradePicker, HtfBadge, HtfPicker, MistakeChips, ResultBadge, SideBadge, sideOf, StyleBadge, TagChips,
 } from "../components/journal/Pickers";
 
 type Step = "plan" | "execute" | "review";
@@ -408,7 +408,7 @@ function DayTable({ trades, tz, onOpen }: { trades: TradeSummary[]; tz: string; 
               <td className="px-3 py-2 font-mono">{t.max_position_size}</td>
               <td className="px-3 py-2 text-ink-muted whitespace-nowrap">{t.time_known ? formatTimeOnly(t.open_time, tz) : "~"}</td>
               <td className="px-3 py-2 font-mono text-ink-muted">{t.dtr && t.atr ? `${Number(t.dtr)}/${Number(t.atr)}` : "—"}</td>
-              <td className="px-3 py-2"><span className={`badge ${t.direction === "long" ? "bg-pos/15 text-pos" : "bg-neg/15 text-neg"}`}>{t.direction === "long" ? "Long" : "Short"}</span></td>
+              <td className="px-3 py-2"><SideBadge trade={t} /></td>
               <td className="px-3 py-2"><TagChips tags={t.tags} category="probability" /></td>
               <td className="px-3 py-2"><TagChips tags={t.tags} category="thesis" /></td>
               <td className="px-3 py-2"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
@@ -441,7 +441,7 @@ function ReviewStep({ form, set, trades }: {
   const missed = trades.filter((t) => t.status === "missed");
   const bias = form.htf_bias;
   const aligned = bias && bias !== "range"
-    ? closed.filter((t) => (bias === "bullish") === (t.direction === "long")).length : null;
+    ? closed.filter((t) => (bias === "bullish") === sideOf(t).bullish).length : null;
   const gradeScore: Record<string, number> = { "A+": 4, A: 3, B: 2, C: 1 };
   const graded = closed.filter((t) => t.entry_quality);
   const avgEntry = graded.length ? graded.reduce((s, t) => s + (gradeScore[t.entry_quality!] ?? 0), 0) / graded.length : null;

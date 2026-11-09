@@ -6,7 +6,7 @@ import { formatMoney, pnlColor } from "../lib/format";
 import { useTheme } from "../lib/theme";
 import PlaybookEditor from "../components/playbooks/PlaybookEditor";
 import { sectionsOf, tone } from "../components/playbooks/shared";
-import { ResultBadge } from "../components/journal/Pickers";
+import { ResultBadge, sideOf } from "../components/journal/Pickers";
 
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${Math.round(v * 100)}%`);
 
@@ -178,7 +178,7 @@ export default function PlaybookDetail() {
                   <tr key={t.id} className="border-b border-card-border/40 hover:bg-card-hover cursor-pointer" onClick={() => nav(`/trades/${t.id}`)}>
                     <td className="px-4 py-1.5 text-ink-muted">{t.trading_date}</td>
                     <td className="px-2 py-1.5 font-mono font-semibold">{t.symbol}</td>
-                    <td className={`px-2 py-1.5 ${t.direction === "long" ? "text-pos" : "text-neg"}`}>{t.direction === "long" ? "Long" : "Short"}</td>
+                    <td className={`px-2 py-1.5 ${sideOf(t).bullish ? "text-pos" : "text-neg"}`}>{sideOf(t).label}</td>
                     <td className="px-2 py-1.5"><ResultBadge result={t.result} partial={t.partial_profit} /></td>
                     <td className={`px-2 py-1.5 text-right font-mono ${t.rules_total && t.rules_followed === t.rules_total ? "text-pos" : "text-ink-muted"}`}>
                       {t.rules_total ? `${t.rules_followed}/${t.rules_total}` : "—"}
