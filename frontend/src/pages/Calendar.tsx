@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useMoney } from "../lib/segment";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import AnalyticsFilterBar, { AnalyticsFilters } from "../components/AnalyticsFilterBar";
@@ -19,7 +20,7 @@ export default function Calendar() {
 
   useEffect(() => { api.calendar(filters as any).then(setData); }, [JSON.stringify(filters)]);
 
-  const ccy = filters.currency ?? "USD";
+  const { ccy } = useMoney({ currency: filters.currency, fallback: "USD" });
 
   const weeks = useMemo(() => {
     const first = new Date(year, month, 1);

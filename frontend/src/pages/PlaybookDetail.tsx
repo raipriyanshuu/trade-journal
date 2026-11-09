@@ -4,6 +4,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { api, BriefStats, PlaybookDetail as PD } from "../lib/api";
 import { formatMoney, pnlColor } from "../lib/format";
 import { useTheme } from "../lib/theme";
+import { useMoney } from "../lib/segment";
 import PlaybookEditor from "../components/playbooks/PlaybookEditor";
 import { sectionsOf, tone } from "../components/playbooks/shared";
 import { ResultBadge, sideOf } from "../components/journal/Pickers";
@@ -21,6 +22,7 @@ export default function PlaybookDetail() {
   const nav = useNavigate();
   const { c } = useTheme();
   const [pb, setPb] = useState<PD | null>(null);
+  const { money } = useMoney({ byCcy: pb?.stats.net_by_ccy });
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
 
@@ -73,7 +75,7 @@ export default function PlaybookDetail() {
         <Kpi label="Win rate">{pct(s.win_rate)}</Kpi>
         <Kpi label="Profit factor">{s.profit_factor ?? (s.wins ? "∞" : "—")}</Kpi>
         <Kpi label="Expectancy">{s.expectancy_r != null ? `${s.expectancy_r}R` : "—"}</Kpi>
-        <Kpi label="Avg win / loss"><span className="text-pos">{s.avg_win.toFixed(0)}</span> / <span className="text-neg">{s.avg_loss.toFixed(0)}</span></Kpi>
+        <Kpi label="Avg win / loss"><span className="text-pos">{money(s.avg_win)}</span> / <span className="text-neg">{money(s.avg_loss)}</span></Kpi>
         <Kpi label="Missed trades">{s.missed}</Kpi>
         <Kpi label="Rules followed">{pct(s.adherence)}</Kpi>
       </div>

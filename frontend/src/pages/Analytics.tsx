@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useMoney } from "../lib/segment";
 import { useTheme } from "../lib/theme";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../lib/api";
@@ -27,6 +28,7 @@ export default function Analytics() {
   const [dim, setDim] = useState("setup_tag");
   const [rows, setRows] = useState<Awaited<ReturnType<typeof api.breakdown>>>([]);
   const [loading, setLoading] = useState(true);
+  const { money } = useMoney({ currency: filters.currency });
 
   useEffect(() => { api.dimensions().then(setDims); }, []);
   useEffect(() => {
@@ -71,8 +73,8 @@ export default function Analytics() {
                     <td className="px-3 py-2 font-medium">{r.key}</td>
                     <td className="px-3 py-2 text-right font-mono">{r.trades}</td>
                     <td className="px-3 py-2 text-right font-mono">{Math.round(r.win_rate * 100)}%</td>
-                    <td className={`px-3 py-2 text-right font-mono ${Number(r.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{r.net_pnl}</td>
-                    <td className="px-3 py-2 text-right font-mono text-ink-muted">{r.avg_pnl}</td>
+                    <td className={`px-3 py-2 text-right font-mono ${Number(r.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{money(r.net_pnl)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-ink-muted">{money(r.avg_pnl)}</td>
                     <td className="px-3 py-2 text-right font-mono text-ink-muted">{r.profit_factor ?? "∞"}</td>
                     <td className="px-3 py-2 text-right font-mono text-ink-muted">{r.expectancy_r ?? "—"}</td>
                   </tr>

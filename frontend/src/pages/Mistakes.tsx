@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { formatMoney } from "../lib/format";
+import { useMoney } from "../lib/segment";
 import { sideOf } from "../components/journal/Pickers";
 import { useTheme } from "../lib/theme";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +16,7 @@ export default function Mistakes() {
   const NEG = c.neg, POS = c.pos, ACCENT = c.accent, GRID = c.border;
   const nav = useNavigate();
   const [filters, setFilters] = useState<AnalyticsFilters>({ include_demo: true });
+  const { money } = useMoney({ currency: filters.currency });
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [drill, setDrill] = useState<{ type: string; trades: TradeSummary[] } | null>(null);
@@ -82,8 +85,8 @@ export default function Mistakes() {
                     <div className="text-xs text-ink-faint">{r.explanation}</div>
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{r.count}</td>
-                  <td className={`px-3 py-2 text-right font-mono ${Number(r.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{r.net_pnl}</td>
-                  <td className="px-3 py-2 text-right font-mono text-ink-muted">{r.avg_net}</td>
+                  <td className={`px-3 py-2 text-right font-mono ${Number(r.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{money(r.net_pnl)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-ink-muted">{money(r.avg_net)}</td>
                   <td className="px-3 py-2 text-right font-mono text-ink-muted">{r.total_r}</td>
                 </tr>
               ))}
@@ -107,9 +110,9 @@ export default function Mistakes() {
               <CmpRow k="Trades" clean={cvm.clean.trades} mistake={cvm.mistake.trades} />
               <CmpRow k="Win rate" clean={pct(cvm.clean.win_rate)} mistake={pct(cvm.mistake.win_rate)} />
               <CmpRow k="Profit factor" clean={cvm.clean.profit_factor ?? "∞"} mistake={cvm.mistake.profit_factor ?? "∞"} />
-              <CmpRow k="Expectancy ($)" clean={cvm.clean.expectancy} mistake={cvm.mistake.expectancy} />
+              <CmpRow k="Expectancy" clean={money(cvm.clean.expectancy)} mistake={money(cvm.mistake.expectancy)} />
               <CmpRow k="Expectancy (R)" clean={cvm.clean.expectancy_r ?? "—"} mistake={cvm.mistake.expectancy_r ?? "—"} />
-              <CmpRow k="Net P&L" clean={cvm.clean.net_pnl} mistake={cvm.mistake.net_pnl} />
+              <CmpRow k="Net P&L" clean={money(cvm.clean.net_pnl)} mistake={money(cvm.mistake.net_pnl)} />
             </tbody>
           </table>
         </Section>
@@ -258,7 +261,7 @@ function DrillModal({ drill, onClose, onOpen }: { drill: { type: string; trades:
                   <td className="px-3 py-2">{t.trading_date}</td>
                   <td className="px-3 py-2 font-mono">{t.symbol}</td>
                   <td className={`px-3 py-2 ${sideOf(t).bullish ? "text-pos" : "text-neg"}`}>{sideOf(t).label}</td>
-                  <td className={`px-3 py-2 text-right font-mono ${Number(t.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{t.net_pnl} {t.currency}</td>
+                  <td className={`px-3 py-2 text-right font-mono ${Number(t.net_pnl) < 0 ? "text-neg" : "text-pos"}`}>{formatMoney(t.net_pnl, t.currency)}</td>
                 </tr>
               ))}
             </tbody>

@@ -10,6 +10,7 @@ import { formatDuration, formatMoney, formatTimeOnly, pnlColor } from "../lib/fo
 import { styleTone } from "../lib/useStyles";
 import { Palette, useTheme } from "../lib/theme";
 import { useConfig } from "../lib/config";
+import { useMoney } from "../lib/segment";
 import { sideOf } from "../components/journal/Pickers";
 
 type Row = { key: string; trades: number; win_rate: number; net_pnl: string; avg_pnl: number; profit_factor: number | null; expectancy_r: number | null };
@@ -57,8 +58,7 @@ export default function Dashboard() {
   }, [key]);
 
   const k = data?.kpis;
-  const ccy = filters.currency ?? (k && Object.keys(k.net_by_ccy ?? {})[0]) ?? "USD";
-  const money = (v: number | string | null | undefined) => formatMoney(v, ccy);
+  const { money } = useMoney({ currency: filters.currency, byCcy: k?.net_by_ccy, fallback: "USD" });
   const beDays = k ? k.days - k.winning_days - k.losing_days : 0;
 
   return (

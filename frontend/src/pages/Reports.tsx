@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { api } from "../lib/api";
 import { useReference } from "../lib/useReference";
 import { useStyles } from "../lib/useStyles";
+import { useMoney, useSegment } from "../lib/segment";
 import { UNASSIGNED_STYLE } from "../lib/api";
 import Markdown from "../components/Markdown";
 
@@ -21,6 +22,8 @@ function shift(anchor: string, period: "week" | "month", dir: number) {
 function pretty(day: string) {
   return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
+
+const MONEY_ROWS = new Set(["net_pnl", "expectancy"]);
 
 const COMPARE_ROWS: [string, string, (v: any) => string, boolean][] = [
   ["trades", "Trades", (v) => String(v ?? 0), true],
@@ -41,6 +44,8 @@ export default function Reports() {
   const [currency, setCurrency] = useState<string | undefined>();
   const [style, setStyle] = useState<string | undefined>();
   const { styles } = useStyles();
+  const { money } = useMoney({ currency });
+  const { segment } = useSegment();
   const [rep, setRep] = useState<any>(null);
   const [ai, setAi] = useState<{ review: string; model: string; truncated: boolean } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -103,7 +108,7 @@ export default function Reports() {
               {pretty(rep.start)} &ndash; {pretty(rep.end)}
               {style && <span className="text-ink-muted font-normal"> &middot; {style === UNASSIGNED_STYLE ? "unassigned" : style} trades</span>}
             </h2>
-            <p className="text-xs text-ink-faint">Compared with {pretty(rep.previous.start)} &ndash; {pretty(rep.previous.end)}{!currency && " · money figures mix currencies unless you pick one"}</p>
+            <p className="text-xs text-ink-faint">Compared with {pretty(rep.previous.start)} &ndash; {pretty(rep.previous.end)}{!currency && segment !== "options" && " · money figures mix currencies unless you pick one"}</p>
           </div>
 
           {rep.focus && (
@@ -134,8 +139,8 @@ export default function Reports() {
                     return (
                       <tr key={key} className="border-t border-card-border/40">
                         <td className="py-1.5 text-ink-muted">{label}</td>
-                        <td className="py-1.5 text-right font-mono">{fmt(c.current)}</td>
-                        <td className="py-1.5 text-right font-mono text-ink-faint">{fmt(c.previous)}</td>
+                        <td className="py-1.5 text-right font-mono">{MONEY_ROWS.has(key) ? money(c.current) : fmt(c.current)}</td>
+                        <td className="py-1.5 text-right font-mono text-ink-faint">{MONEY_ROWS.has(key) ? money(c.previous) : fmt(c.previous)}</td>
                         <td className={`py-1.5 text-right font-mono ${d === null || d === 0 ? "text-ink-faint" : d > 0 ? "text-pos" : "text-neg"}`}>
                           {d === null || d === 0 ? "—" : `${d > 0 ? "▲" : "▼"}`}
                         </td>
@@ -164,9 +169,9 @@ export default function Reports() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ListCard title="Best setups" empty="No tagged setups yet." rows={rep.best_setups.map((s: any) => [s.key, s.net_pnl, `${s.trades} trades · ${Math.round(s.win_rate * 100)}%`])} />
-            <ListCard title="Worst setups" empty="No losing setups." rows={rep.worst_setups.map((s: any) => [s.key, s.net_pnl, `${s.trades} trades · ${Math.round(s.win_rate * 100)}%`])} />
-            <ListCard title="Costliest mistakes" empty="No costly mistakes." rows={rep.top_mistakes.map((m: any) => [m.type.replace(/^(tag|manual):/, ""), m.net_pnl, `${m.count}×`])} />
+            <ListCard money={money} title="Best setups" empty="No tagged setups yet." rows={rep.best_setups.map((s: any) => [s.key, s.net_pnl, `${s.trades} trades · ${Math.round(s.win_rate * 100)}%`])} />
+            <ListCard money={money} title="Worst setups" empty="No losing setups." rows={rep.worst_setups.map((s: any) => [s.key, s.net_pnl, `${s.trades} trades · ${Math.round(s.win_rate * 100)}%`])} />
+            <ListCard money={money} title="Costliest mistakes" empty="No costly mistakes." rows={rep.top_mistakes.map((m: any) => [m.type.replace(/^(tag|manual):/, ""), m.net_pnl, `${m.count}×`])} />
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
@@ -220,7 +225,7 @@ export default function Reports() {
   );
 }
 
-function ListCard({ title, rows, empty }: { title: string; rows: [string, string, string][]; empty: string }) {
+function ListCard({ title, rows, empty, money }: { title: string; rows: [string, string, string][]; empty: string; money: (v: string) => string }) {
   return (
     <div className="card p-4">
       <h3 className="font-medium text-sm mb-2">{title}</h3>
@@ -229,7 +234,7 @@ function ListCard({ title, rows, empty }: { title: string; rows: [string, string
           {rows.map(([name, net, sub]) => (
             <li key={name} className="flex items-center justify-between text-sm">
               <span>{name} <span className="text-xs text-ink-faint">{sub}</span></span>
-              <span className={`font-mono ${Number(net) >= 0 ? "text-pos" : "text-neg"}`}>{net}</span>
+              <span className={`font-mono ${Number(net) >= 0 ? "text-pos" : "text-neg"}`}>{money(net)}</span>
             </li>
           ))}
         </ul>

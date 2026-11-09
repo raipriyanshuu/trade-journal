@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useMoney } from "../lib/segment";
 import { useTheme } from "../lib/theme";
 import { useNavigate } from "react-router-dom";
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
@@ -11,6 +12,7 @@ export default function Excursions() {
   const POS = c.pos, NEG = c.neg, GRID = c.border;
   const nav = useNavigate();
   const [filters, setFilters] = useState<AnalyticsFilters>({ include_demo: true });
+  const { money } = useMoney({ currency: filters.currency });
   const [adverse, setAdverse] = useState(0.5);
   const [unit, setUnit] = useState<"r" | "points">("r");
   const [data, setData] = useState<any>(null);
@@ -113,7 +115,7 @@ export default function Excursions() {
                     <td className="px-3 py-1.5 font-mono text-neg">{p.mae_points} pts{p.mae_r !== null ? ` / ${p.mae_r.toFixed(2)}R` : ""}</td>
                     <td className="px-3 py-1.5 font-mono text-pos">{p.mfe_points} pts{p.mfe_r !== null ? ` / ${p.mfe_r.toFixed(2)}R` : ""}</td>
                     <td className="px-3 py-1.5 font-mono">{p.captured_pct === null ? "—" : `${p.captured_pct}%`}</td>
-                    <td className={`px-3 py-1.5 font-mono ${p.net_pnl >= 0 ? "text-pos" : "text-neg"}`}>{p.net_pnl}</td>
+                    <td className={`px-3 py-1.5 font-mono ${p.net_pnl >= 0 ? "text-pos" : "text-neg"}`}>{money(p.net_pnl)}</td>
                   </tr>
                 ))}
               </tbody>
