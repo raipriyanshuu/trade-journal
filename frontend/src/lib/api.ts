@@ -72,6 +72,47 @@ export interface AttachmentRow {
   file_path: string;
   original_name: string | null;
   mime_type: string | null;
+  annotations?: Shape[] | null;
+}
+
+/** A drawing on a screenshot, in the image's own pixel coordinates. */
+export interface Shape {
+  id: string;
+  type: "pen" | "line" | "arrow" | "box" | "circle" | "text";
+  x1?: number; y1?: number; x2?: number; y2?: number;
+  points?: [number, number][];
+  text?: string;
+  color: string;
+  size: number;
+}
+
+export type NoteType = "mistake" | "lesson" | "idea" | "observation" | "note";
+
+export interface Note {
+  id: number;
+  title: string;
+  body: string;
+  note_type: NoteType;
+  pinned: boolean;
+  note_date: string;
+  instrument_id: number | null;
+  symbol: string | null;
+  trade_id: number | null;
+  in_review: boolean;
+  review_box: number;
+  next_review: string | null;
+  mastered: boolean;
+  times_reviewed: number;
+  times_got_it: number;
+  created_at: string;
+  updated_at: string;
+  attachments: AttachmentRow[];
+}
+
+export interface ReviewDue {
+  today: string;
+  due: Note[];
+  stats: { due: number; in_deck: number; mastered: number; learning: number; next_due: string | null };
 }
 
 export interface TradeSummary {
@@ -630,6 +671,30 @@ export const api = {
     if (!res.ok) throw new Error(`${res.status}: upload failed`);
     return res.json() as Promise<AttachmentRow>;
   },
+  saveAnnotations: (attachmentId: number, shapes: Shape[]) =>
+    request<AttachmentRow>(`/api/attachments/${attachmentId}/annotations`, { method: "PUT", body: JSON.stringify({ shapes }) }),
+
+  // Notes
+  listNotes: (params: { note_type?: string; q?: string; pinned?: boolean; in_review?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.append(k, String(v)); });
+    return request<Note[]>(`/api/notes?${qs}`);
+  },
+  createNote: (body: Partial<Note>) => request<Note>("/api/notes", { method: "POST", body: JSON.stringify(body) }),
+  updateNote: (id: number, patch: Partial<Note>) =>
+    request<Note>(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deleteNote: (id: number) => request<void>(`/api/notes/${id}`, { method: "DELETE" }),
+  uploadNoteAttachment: async (noteId: number, file: File | Blob, filename = "paste.png") => {
+    const fd = new FormData();
+    fd.append("file", file, filename);
+    const res = await fetch(`/api/notes/${noteId}/attachments`, { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`${res.status}: upload failed`);
+    return res.json() as Promise<AttachmentRow>;
+  },
+  reviewDue: () => request<ReviewDue>("/api/notes/review/due"),
+  reviewNote: (id: number, result: "got_it" | "again") =>
+    request<Note>(`/api/notes/${id}/review`, { method: "POST", body: JSON.stringify({ result }) }),
+
   deleteAttachment: (id: number) =>
     request<void>(`/api/attachments/${id}`, { method: "DELETE" }),
 };

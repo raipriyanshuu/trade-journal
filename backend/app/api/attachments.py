@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from sqlalchemy import select
@@ -100,3 +101,34 @@ def delete_attachment(attachment_id: int, db: Session = Depends(get_db)):
         file_path.unlink(missing_ok=True)
     except OSError:
         pass
+
+
+ANNOTATION_TYPES = {"pen", "line", "arrow", "box", "circle", "text"}
+
+
+class AnnotationsIn(BaseModel):
+    shapes: list[dict]
+
+
+@router.put("/attachments/{attachment_id}/annotations", response_model=AttachmentRead)
+def save_annotations(attachment_id: int, payload: AnnotationsIn, db: Session = Depends(get_db)):
+    """Drawings on a screenshot, stored next to it (the image file is untouched)."""
+    att = db.get(Attachment, attachment_id)
+    if att is None:
+        raise HTTPException(404, "Attachment not found")
+    if len(payload.shapes) > 500:
+        raise HTTPException(422, "Too many drawings on one screenshot")
+    clean = []
+    for s in payload.shapes:
+        if s.get("type") not in ANNOTATION_TYPES:
+            raise HTTPException(422, f"Unknown drawing type: {s.get('type')}")
+        if s["type"] == "text" and len(str(s.get("text", ""))) > 500:
+            raise HTTPException(422, "Text is too long")
+        if s["type"] == "pen" and len(s.get("points") or []) > 4000:
+            raise HTTPException(422, "Pen stroke is too long")
+        clean.append({k: s[k] for k in ("id", "type", "x1", "y1", "x2", "y2", "points", "text", "color", "size")
+                      if k in s})
+    att.annotations = clean
+    db.commit()
+    db.refresh(att)
+    return att

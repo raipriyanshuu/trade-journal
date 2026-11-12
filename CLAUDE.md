@@ -107,6 +107,11 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   Options trades carry `option_type` call|put and `direction` stays "long"
   (bought). Use `Trade.bias_direction` for market-bias logic and
   `Trade.side_label` for grouping/display; frontend `sideOf()` in Pickers.tsx.
+- **Notes:** `models/note.py`, `api/notes.py` (`today()` uses the display tz;
+  review = Leitner boxes, `REVIEW_INTERVALS`). Screenshots are `Attachment`
+  rows with `note_id`. Drawings on any screenshot: `attachments.annotations`
+  (image-pixel coordinates), `PUT /api/attachments/{id}/annotations`;
+  frontend `components/annotate/Annotations.tsx` + editor in `Lightbox.tsx`.
 - **Playbooks:** `models/playbook.py` (Playbook, PlaybookRule, `trade_rule_checks`),
   `trades.playbook_id` (SET NULL on delete). Logic + stats in `core/playbooks.py`
   (`sync_rules` keeps ids for edited rules, deletes removed ones), API in

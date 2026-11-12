@@ -22,6 +22,7 @@ class AttachmentRead(ORMModel):
     file_path: str
     original_name: str | None
     mime_type: str | None
+    annotations: list[dict] | None = None
 
 
 class Leg(BaseModel):

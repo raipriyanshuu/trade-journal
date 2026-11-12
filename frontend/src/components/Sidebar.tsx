@@ -15,6 +15,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { to: "/journal", label: "Trading Day", icon: "✎" },
       { to: "/trades", label: "Trade Log", icon: "≡" },
       { to: "/playbooks", label: "Playbooks", icon: "▤" },
+      { to: "/notes", label: "Notes", icon: "✐" },
       { to: "/calendar", label: "P&L Calendar", icon: "▦" },
     ],
   },

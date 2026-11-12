@@ -13,6 +13,7 @@ import {
 } from "../lib/format";
 import Modal from "../components/Modal";
 import Lightbox from "../components/Lightbox";
+import { AnnotatedThumb } from "../components/annotate/Annotations";
 import ReplayChart from "../components/trades/ReplayChart";
 import {
   CATEGORY_LABELS, ChipPicker, GradeBadge, GradePicker, HtfBadge, HtfPicker, JOURNAL_CATEGORIES, ResultBadge,
@@ -201,10 +202,11 @@ export default function TradeDetail() {
               {trade.attachments.length === 0 && <span className="text-ink-faint text-sm">None yet.</span>}
               {trade.attachments.map((a, i) => (
                 <div key={a.id} className="relative group">
-                  <img
+                  <AnnotatedThumb
                     src={`/attachments/${a.file_path}`}
+                    shapes={a.annotations}
                     alt={a.original_name ?? "Screenshot"}
-                    title="Click to enlarge"
+                    title="Click to enlarge or draw on it"
                     className="h-28 rounded-lg border border-card-border cursor-zoom-in hover:border-accent/60 transition-colors"
                     onClick={() => setViewer(i)}
                   />
@@ -272,10 +274,13 @@ export default function TradeDetail() {
       )}
       {viewer !== null && trade.attachments[viewer] && (
         <Lightbox
-          images={trade.attachments.map((a) => ({ src: `/attachments/${a.file_path}`, name: a.original_name }))}
+          images={trade.attachments.map((a) => ({ src: `/attachments/${a.file_path}`, name: a.original_name, id: a.id, annotations: a.annotations }))}
           index={viewer}
           onIndex={setViewer}
           onClose={() => setViewer(null)}
+          onAnnotationsSaved={(id, shapes) => setTrade((t) => t && ({
+            ...t, attachments: t.attachments.map((x) => (x.id === id ? { ...x, annotations: shapes } : x)),
+          }))}
         />
       )}
       {editExec && (

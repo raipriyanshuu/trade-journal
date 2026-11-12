@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, AttachmentRow } from "../../lib/api";
 import Lightbox from "../Lightbox";
+import { AnnotatedImage } from "../annotate/Annotations";
 
 /**
  * Chart screenshots for a trading day (e.g. your marked levels before the open).
@@ -71,7 +72,7 @@ export default function DayScreenshots({ sessionId, ensureSession, title = "Pre-
             onChange={(e) => { upload(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
         </label>
       </div>
-      <p className="text-xs text-ink-faint mb-2">{hint ?? "Mark your levels on the chart, then paste the screenshot here (Ctrl+V)."}</p>
+      <p className="text-xs text-ink-faint mb-2">{hint ?? "Mark your levels on the chart, then paste the screenshot here (Ctrl+V). Click one to draw or write on it."}</p>
       {err && <p className="text-xs text-neg mb-2">{err}</p>}
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-card-border p-5 text-center text-sm text-ink-faint">No screenshots yet.</div>
@@ -79,8 +80,8 @@ export default function DayScreenshots({ sessionId, ensureSession, title = "Pre-
         <div className="grid grid-cols-2 gap-2">
           {items.map((a, i) => (
             <div key={a.id} className="relative group">
-              <img src={`/attachments/${a.file_path}`} alt={a.original_name ?? "Chart screenshot"} title="Click to enlarge"
-                className="w-full h-28 object-cover rounded-lg border border-card-border cursor-zoom-in hover:border-accent/60"
+              <AnnotatedImage src={`/attachments/${a.file_path}`} shapes={a.annotations} alt={a.original_name ?? "Chart screenshot"}
+                className="rounded-lg border border-card-border cursor-zoom-in hover:border-accent/60 overflow-hidden"
                 onClick={() => setViewer(i)} />
               <button className="absolute top-1 right-1 bg-black/70 text-white rounded px-1.5 text-xs opacity-0 group-hover:opacity-100"
                 title="Delete screenshot" onClick={() => remove(a)}>&times;</button>
@@ -89,8 +90,9 @@ export default function DayScreenshots({ sessionId, ensureSession, title = "Pre-
         </div>
       )}
       {viewer !== null && items[viewer] && (
-        <Lightbox images={items.map((a) => ({ src: `/attachments/${a.file_path}`, name: a.original_name }))}
-          index={viewer} onIndex={setViewer} onClose={() => setViewer(null)} />
+        <Lightbox images={items.map((a) => ({ src: `/attachments/${a.file_path}`, name: a.original_name, id: a.id, annotations: a.annotations }))}
+          index={viewer} onIndex={setViewer} onClose={() => setViewer(null)}
+          onAnnotationsSaved={(id, shapes) => setItems((x) => x.map((a) => (a.id === id ? { ...a, annotations: shapes } : a)))} />
       )}
     </div>
   );

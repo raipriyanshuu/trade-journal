@@ -13,6 +13,7 @@ from app.models.importing import ImportBatch, MappingProfile
 from app.models.setting import Setting
 from app.models.bar import Bar
 from app.models.playbook import Playbook, PlaybookRule, trade_rule_checks
+from app.models.note import Note
 
 __all__ = [
     "Base",
@@ -32,4 +33,5 @@ __all__ = [
     "Playbook",
     "PlaybookRule",
     "trade_rule_checks",
+    "Note",
 ]

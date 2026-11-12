@@ -381,6 +381,20 @@ its own database file `data/backtest.db`, its own candle store and API.
 
 ---
 
+## Notes page + drawing on screenshots ✅
+
+- **Notes** (sidebar → Journal): quick capture (type, instrument, paste/upload
+  screenshots), pinboard of cards with filters (Mistakes / Lessons / Ideas /
+  Observations / Pinned / In review) and search, full editor.
+- **Review deck** on top: lessons and mistakes join automatically (any note
+  can); "Got it" brings a card back after 1/2/4/8/16/32 days, "Still learning"
+  tomorrow; mastered after 4 straight. Stats: due, in deck, mastered.
+- **Draw / write on any screenshot** (notes, trades, Trading Day): pen, line,
+  arrow, box, circle, text, eraser, colours, sizes, undo; saved as a layer in
+  `attachments.annotations`, the image file is never modified.
+
+---
+
 ## Next: Phase 6 — Prop-firm tracker (skipped for now)
 Per-account prop rules, live status cards (balance, target, daily loss, drawdown
 floor, consistency, trading days), colour warnings, and balance-vs-floor history.
