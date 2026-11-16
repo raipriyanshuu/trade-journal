@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import PropDayStrip from "../components/prop/PropDayStrip";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, DailySession, TradeSummary } from "../lib/api";
 import { useReference } from "../lib/useReference";
@@ -156,6 +157,9 @@ export default function Journal() {
         </div>
       </div>
       {savedAt && !dirty && <p className="text-xs text-ink-faint -mt-2 mb-3">Saved at {savedAt}</p>}
+      {accountId != null && ["prop_eval", "prop_funded"].includes(accounts.find((a) => a.id === accountId)?.type ?? "") && (
+        <PropDayStrip accountId={accountId} refreshKey={trades.map((t) => `${t.id}:${t.net_pnl}`).join(",")} />
+      )}
 
       {/* Stepper */}
       <div className="grid grid-cols-3 gap-2 mb-5">

@@ -144,7 +144,7 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
 - Pages: Dashboard, TradeLog (journal + numbers views), TradeDetail, Journal
   (Trading Day), Calendar, Mistakes, Analytics (Breakdowns), Reports, Excursions
   (MAE/MFE), Data (import/export/bar data), Settings (tabs incl. Market data,
-  India charges, AI review, Mistake rules, Tags), PropTracker (placeholder).
+  India charges, AI review, Mistake rules, Tags), PropTracker + PropAccount (`/prop`, `/prop/:id`).
 
 ## Gotchas learned the hard way
 - **Migrations (SQLite batch mode):** constraint naming convention lives in
@@ -172,6 +172,8 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   (private). The user pushes from VS Code themselves — don't push unless asked.
 - Verify UI changes in the browser against a throwaway copy, run the full test
   suite and `npm run build`, update `PROGRESS.md` for user-visible changes.
-- Not done yet: **Phase 6 — prop-firm tracker** (account rule fields already exist;
-  `PropTracker.tsx` is a placeholder). NSE/MCX chart data comes from the user's own
+- Prop Tracker: rules engine in `core/prop.py` (`evaluate` = balance, drawdown floor by
+  type, daily loss, consistency, days, contracts, breaches, can-lose-today; from closed
+  trades only), costs/payouts in `prop_ledger` (`reset` restarts the balance, `payout`
+  lowers it). API in `api/prop.py`. Not book-scoped. NSE/MCX chart data comes from the user's own
   source via Import / Export → Bar data (not MotiveWave).

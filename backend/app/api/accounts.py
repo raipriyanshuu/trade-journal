@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.prop import check_prop_fields
 from app.db import get_db
 from app.models import Account
 from app.schemas.account import AccountCreate, AccountRead, AccountUpdate
@@ -22,6 +23,7 @@ def list_accounts(db: Session = Depends(get_db)):
 def create_account(payload: AccountCreate, db: Session = Depends(get_db)):
     if db.scalar(select(Account).where(Account.name == payload.name)):
         raise HTTPException(409, f"Account '{payload.name}' already exists")
+    check_prop_fields(payload.model_dump())
     acc = Account(**payload.model_dump())
     db.add(acc)
     db.commit()
@@ -42,7 +44,9 @@ def update_account(account_id: int, payload: AccountUpdate, db: Session = Depend
     acc = db.get(Account, account_id)
     if acc is None:
         raise HTTPException(404, "Account not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    check_prop_fields(data)
+    for field, value in data.items():
         setattr(acc, field, value)
     db.commit()
     db.refresh(acc)

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from datetime import date
 
-from sqlalchemy import Boolean, Integer, String
+from sqlalchemy import Boolean, Date, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, DemoMixin, TimestampMixin
@@ -15,6 +16,7 @@ ACCOUNT_TYPES = ("prop_eval", "prop_funded", "personal")
 
 # Max drawdown types for prop accounts (used in Phase 6)
 MAX_DD_TYPES = ("static", "trailing_intraday", "trailing_eod", "trailing_lock_breakeven")
+PROP_STATUSES = ("in_progress", "passed", "failed", "funded", "closed")
 
 
 class Account(Base, TimestampMixin, DemoMixin):
@@ -39,3 +41,10 @@ class Account(Base, TimestampMixin, DemoMixin):
     consistency_pct: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)
     min_trading_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_contracts: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Prop tracker (Phase 6).
+    firm: Mapped[str | None] = mapped_column(String, nullable=True)
+    # None = let the tracker suggest one from the results.
+    prop_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    prop_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Balance at which a "trailing until breakeven" floor stops (default: starting balance).
+    drawdown_lock_at: Mapped[Decimal | None] = mapped_column(DecimalText, nullable=True)

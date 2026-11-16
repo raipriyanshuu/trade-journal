@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from pydantic import Field
@@ -26,6 +27,10 @@ class AccountRead(ORMModel):
     consistency_pct: DecimalStr | None
     min_trading_days: int | None
     max_contracts: int | None
+    firm: str | None = None
+    prop_status: str | None = None
+    prop_start_date: date | None = None
+    drawdown_lock_at: DecimalStr | None = None
 
 
 class AccountCreate(ORMModel):
@@ -43,6 +48,10 @@ class AccountCreate(ORMModel):
     consistency_pct: DecimalStr | None = None
     min_trading_days: int | None = None
     max_contracts: int | None = None
+    firm: str | None = None
+    prop_status: str | None = None
+    prop_start_date: date | None = None
+    drawdown_lock_at: DecimalStr | None = None
 
 
 class AccountUpdate(ORMModel):
@@ -60,3 +69,7 @@ class AccountUpdate(ORMModel):
     consistency_pct: DecimalStr | None = None
     min_trading_days: int | None = None
     max_contracts: int | None = None
+    firm: str | None = None
+    prop_status: str | None = None
+    prop_start_date: date | None = None
+    drawdown_lock_at: DecimalStr | None = None

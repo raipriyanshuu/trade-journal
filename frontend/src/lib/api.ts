@@ -35,6 +35,36 @@ export interface Account {
   consistency_pct: string | null;
   min_trading_days: number | null;
   max_contracts: number | null;
+  firm: string | null;
+  prop_status: string | null;
+  prop_start_date: string | null;
+  drawdown_lock_at: string | null;
+}
+
+export type PropLevel = "ok" | "caution" | "warning" | "danger" | "breached";
+export interface PropRule {
+  key: string; label: string; used: number | null; level: PropLevel;
+  value: number | null; limit: number | null;
+}
+export interface PropDay {
+  date: string; balance: number; floor: number | null; day_net: number; low: number;
+  trades: number; payout: number | null; target: number | null;
+}
+export interface PropEval {
+  start_balance: number; balance: number; profit: number; target: number | null;
+  target_remaining: number | null; target_pct: number | null;
+  floor: number | null; distance_to_floor: number | null; drawdown_type: string | null;
+  today: string; today_net: number; daily_left: number | null; can_lose_today: number | null;
+  consistency_pct: number | null; best_day: number | null; trading_days: number;
+  max_contracts_used: number; period_start: string | null; trades: number;
+  rules: PropRule[]; worst_level: PropLevel;
+  breaches: { date: string; rule: string; detail: string }[];
+  suggested_status: string; status: string; history?: PropDay[];
+}
+export interface LedgerTotals { costs: number; payouts: number; net: number }
+export interface LedgerEntry { id: number; account_id: number; entry_date: string; kind: string; amount: number; note: string }
+export interface PropAccountStatus {
+  account: Account; status: PropEval; ledger_totals: LedgerTotals; ledger?: LedgerEntry[];
 }
 
 export interface DemoStatus {
@@ -442,6 +472,17 @@ export const api = {
     request<Account>(`/api/accounts/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteAccount: (id: number) =>
     request<void>(`/api/accounts/${id}`, { method: "DELETE" }),
+  duplicateAccount: (id: number) =>
+    request<Account>(`/api/accounts/${id}/duplicate`, { method: "POST" }),
+
+  // Prop Tracker
+  propAccounts: () =>
+    request<{ accounts: PropAccountStatus[]; totals: LedgerTotals & { by_status: Record<string, number>; trading_profit: number } }>(
+      "/api/prop/accounts"),
+  propAccount: (id: number) => request<PropAccountStatus>(`/api/prop/accounts/${id}`),
+  addLedger: (id: number, e: { entry_date: string; kind: string; amount: string; note: string }) =>
+    request<LedgerEntry>(`/api/prop/accounts/${id}/ledger`, { method: "POST", body: JSON.stringify(e) }),
+  deleteLedger: (entryId: number) => request<void>(`/api/prop/ledger/${entryId}`, { method: "DELETE" }),
 
   // Settings
   getSettings: () => request<Settings>("/api/settings"),

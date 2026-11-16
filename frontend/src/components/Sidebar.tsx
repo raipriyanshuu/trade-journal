@@ -32,7 +32,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/reports", label: "Reports", icon: "☰" },
       { to: "/excursions", label: "MAE / MFE", icon: "↔" },
-      { to: "/prop", label: "Prop Tracker", icon: "◈", phase: 6 },
+      { to: "/prop", label: "Prop Tracker", icon: "◈" },
     ],
   },
   {

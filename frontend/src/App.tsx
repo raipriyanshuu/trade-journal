@@ -8,6 +8,7 @@ import Mistakes from "./pages/Mistakes";
 import Analytics from "./pages/Analytics";
 import Calendar from "./pages/Calendar";
 import PropTracker from "./pages/PropTracker";
+import PropAccount from "./pages/PropAccount";
 import Data from "./pages/Data";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="prop" element={<PropTracker />} />
+        <Route path="prop/:id" element={<PropAccount />} />
         <Route path="reports" element={<Reports />} />
         <Route path="excursions" element={<Excursions />} />
         <Route path="backtest" element={<Backtest />} />

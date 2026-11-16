@@ -14,6 +14,7 @@ from app.models.setting import Setting
 from app.models.bar import Bar
 from app.models.playbook import Playbook, PlaybookRule, trade_rule_checks
 from app.models.note import Note
+from app.models.prop import PropLedgerEntry
 
 __all__ = [
     "Base",
@@ -34,4 +35,5 @@ __all__ = [
     "PlaybookRule",
     "trade_rule_checks",
     "Note",
+    "PropLedgerEntry",
 ]

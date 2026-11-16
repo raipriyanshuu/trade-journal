@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, TradeFilters, TradeSummary, UNASSIGNED_STYLE } from "../lib/api";
 import { useStyles } from "../lib/useStyles";
 import { useReference } from "../lib/useReference";
@@ -25,7 +25,10 @@ export default function TradeLog() {
   const nav = useNavigate();
   const { tz } = useConfig();
   const { accounts, instruments, tags, reloadTags } = useReference();
-  const [filters, setFilters] = useState<TradeFilters>({ sort_by: "open_time", order: "desc" });
+  const [params] = useSearchParams();
+  const [filters, setFilters] = useState<TradeFilters>(() => ({
+    sort_by: "open_time", order: "desc", ...(params.get("account") ? { account_id: Number(params.get("account")) } : {}),
+  }));
   const [trades, setTrades] = useState<TradeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<"taken" | "missed" | null>(null);

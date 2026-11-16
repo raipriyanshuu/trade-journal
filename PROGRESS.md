@@ -16,7 +16,7 @@
 - Server binds to `127.0.0.1` only.
 
 **Data model (all tables except `bars`, which comes in Phase 7)**
-- `accounts` (incl. prop-rule fields for Phase 6), `instruments`, `executions`,
+- `accounts` (incl. prop-rule fields, used by the Prop Tracker), `instruments`, `executions`,
   `trades` (incl. the auction-market context fields), `tags` + `trade_tags`,
   `daily_sessions` (full morning-plan / evening-review fields), `mistake_flags`
   (with a `dismissed` flag), `attachments`, `import_batches`, `mapping_profiles`,
@@ -199,7 +199,7 @@ edit rebuild, and result/direction filters.
 
 ## Phase 7 — Advanced review ✅ (complete) + Notion-style daily workflow
 
-Phase 6 was skipped on request and is still to do (see below).
+Phase 6 was done later (see Prop Tracker below).
 
 ### Plan → Execute → Review (the daily workflow)
 - **Trading Day** page (`/journal`, first item in the sidebar) is a 3-step workspace
@@ -395,7 +395,24 @@ its own database file `data/backtest.db`, its own candle store and API.
 
 ---
 
-## Next: Phase 6 — Prop-firm tracker (skipped for now)
-Per-account prop rules, live status cards (balance, target, daily loss, drawdown
-floor, consistency, trading days), colour warnings, and balance-vs-floor history.
-The account fields already exist and feed the OVERSIZE / AFTER_DAILY_LIMIT rules.
+## Phase 6 — Prop Tracker ✅
+
+- **Prop rules per account** (Settings → Accounts or "+ Prop account"): firm, start
+  date, size, profit target, daily loss limit, max drawdown (static / trailing end
+  of day / trailing intraday / trailing that locks at breakeven or a set level),
+  consistency %, minimum trading days, max contracts, status (automatic from the
+  rules, or set by hand: in progress / passed / failed / funded / closed).
+- **Prop Tracker page**: a card per prop account with balance, profit, target
+  progress, today vs the daily limit, drawdown floor and distance, **"can lose
+  today"** (the tighter of the daily limit and the floor), consistency, days and
+  contracts; colours at 50 / 75 / 90 / 100% of each limit. Totals strip: money
+  spent on fees and resets, payouts received, net from prop firms.
+- **Account page**: balance vs floor vs target chart, rule checklist, rule breaks,
+  day-by-day table, and the **costs & payouts ledger** (eval/activation fees,
+  resets, subscriptions, payouts). A payout lowers the balance; a reset restarts
+  the account from that date. **Duplicate** copies the rules into a fresh account.
+- **Trading Day** shows a prop line (can lose today, daily limit left, floor, to
+  target) when a prop account is selected.
+- Calculated from closed trades only, so "trailing intraday" follows closed-trade
+  peaks (the firm also sees open P&L).
+- **158 backend tests passing.**
