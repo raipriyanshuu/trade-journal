@@ -145,6 +145,8 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   (Trading Day), Calendar, Mistakes, Analytics (Breakdowns), Reports, Excursions
   (MAE/MFE), Data (import/export/bar data), Settings (tabs incl. Market data,
   India charges, AI review, Mistake rules, Tags), PropTracker + PropAccount (`/prop`, `/prop/:id`).
+  ReportCard (`/report-card?date=`): `api/report_cards.py`, table `report_cards`; grade/lesson/
+  change/tomorrow's goal live on the day's general `daily_sessions` row (shared with Review).
 
 ## Gotchas learned the hard way
 - **Migrations (SQLite batch mode):** constraint naming convention lives in

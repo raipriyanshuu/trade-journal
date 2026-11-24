@@ -165,6 +165,17 @@ DEFAULT_SETTINGS = {
         "symbols": {"ES": "ES=F", "MES": "ES=F", "NQ": "NQ=F", "MNQ": "NQ=F",
                     "GC": "GC=F", "MGC": "GC=F", "CL": "CL=F", "MCL": "CL=F"},
     },
+    # Daily Report Card: time segments (IST), table columns and standing reminders.
+    "report_card": {
+        "segments": ["Pre-market prep", "US open 19:00-20:30", "US mid 20:30-23:00",
+                     "US close 23:00-01:30", "MCX day 09:00-17:00", "MCX evening 17:00-23:30"],
+        "columns": [
+            {"name": "A+ setups only", "options": ["Yes", "No"]},
+            {"name": "Sizing", "options": ["Right", "Too big", "Too small"]},
+            {"name": "In my favor", "options": ["Yes", "No"]},
+        ],
+        "reminders": [],
+    },
     # Default pre-market readiness checklist for the daily Plan step.
     "readiness_template": [
         "Slept well / clear head",

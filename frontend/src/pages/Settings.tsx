@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import MarketDataTab from "../components/settings/MarketDataTab";
 import InstrumentsTab from "../components/settings/InstrumentsTab";
 import AccountsTab from "../components/settings/AccountsTab";
+import ReportCardTab from "../components/settings/ReportCardTab";
 import PreferencesTab from "../components/settings/PreferencesTab";
 import TagsTab from "../components/settings/TagsTab";
 import RulesTab from "../components/settings/RulesTab";
@@ -19,6 +20,7 @@ const TABS = [
   { key: "market", label: "Market data" },
   { key: "ai", label: "AI review" },
   { key: "preferences", label: "Preferences" },
+  { key: "reportcard", label: "Report card" },
   { key: "demo", label: "Demo Data" },
 ] as const;
 
@@ -49,6 +51,7 @@ export default function Settings() {
       </div>
 
       {tab === "instruments" && <InstrumentsTab />}
+      {tab === "reportcard" && <ReportCardTab />}
       {tab === "accounts" && <AccountsTab />}
       {tab === "tags" && <TagsTab />}
       {tab === "rules" && <RulesTab />}

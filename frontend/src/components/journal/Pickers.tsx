@@ -160,7 +160,7 @@ export function ChipPicker({
   );
 }
 
-const GRADES = ["A+", "A", "B", "C"];
+export const GRADES = ["A+", "A", "B", "C"];
 const GRADE_TONE: Record<string, string> = {
   "A+": "bg-amber-400/20 text-amber-300",
   A: "bg-pos/20 text-pos",

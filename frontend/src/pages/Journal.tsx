@@ -151,6 +151,8 @@ export default function Journal() {
             <option value="">All instruments</option>
             {instruments.map((i) => <option key={i.id} value={i.id}>{i.symbol_root} &middot; {i.display_name}</option>)}
           </select>
+          <button className="btn-ghost" onClick={() => nav(`/report-card?date=${date}`)}
+            title="Day grade, lesson, change and tomorrow's goal are shared with the report card">Report card</button>
           <button className="btn-primary" onClick={() => save()} disabled={saving}>
             {saving ? "Saving…" : dirty ? "Save" : "Saved"}
           </button>

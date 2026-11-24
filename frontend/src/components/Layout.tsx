@@ -3,7 +3,7 @@ import Sidebar from "./Sidebar";
 import { useSegment } from "../lib/segment";
 
 // Pages that aren't split into futures / options books.
-const UNSCOPED = ["/backtest", "/settings", "/data", "/notes", "/prop"];
+const UNSCOPED = ["/backtest", "/settings", "/data", "/notes", "/prop", "/report-card"];
 
 export default function Layout() {
   const { segment, setSegment } = useSegment();

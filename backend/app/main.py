@@ -14,6 +14,7 @@ from app.api import analytics as analytics_api
 from app.api import playbooks as playbooks_api
 from app.api import notes as notes_api
 from app.api import prop as prop_api
+from app.api import report_cards as report_cards_api
 from app.api import export as export_api
 from app.api import mistakes as mistakes_api
 from app.api import importing as import_api
@@ -79,6 +80,7 @@ app.include_router(analytics_api.router)
 app.include_router(playbooks_api.router)
 app.include_router(notes_api.router)
 app.include_router(prop_api.router)
+app.include_router(report_cards_api.router)
 app.include_router(trades.router)
 app.include_router(executions.router)
 app.include_router(attachments.router)

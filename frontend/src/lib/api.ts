@@ -41,6 +41,27 @@ export interface Account {
   drawdown_lock_at: string | null;
 }
 
+export interface RCSegment { name: string; grade: string | null; cells: Record<string, string>; comment: string }
+export interface RCColumn { name: string; options: string[] }
+export interface ReportCardConfig { segments: string[]; columns: RCColumn[]; reminders: string[] }
+export interface ReportCardTrade extends TradeSummary { notes: string; attachments: AttachmentRow[] }
+export interface ReportCardFields {
+  goal: string; goal_result: string | null; segments: RCSegment[]; overview: string; easiest_money: string;
+  grade: string | null; learned: string; changes: string; goal_tomorrow: string;
+}
+export interface ReportCard extends ReportCardFields {
+  date: string; exists: boolean; goal_streak: number;
+  carried_over: { text: string; date: string; from: string } | null;
+  trades: ReportCardTrade[]; net: Record<string, number>; prev_card: string | null; next_card: string | null;
+}
+export interface RCDay { date: string; has_card: boolean; grade: string | null; goal: string; goal_result: string | null; net: Record<string, number>; trades: number }
+export interface RCStats {
+  goal: { hit: number; partly: number; missed: number; rated: number; hit_rate: number | null };
+  segments: { name: string; days: number; avg: number; grade: string }[];
+  grades: { grade: string; days: number; avg_net: Record<string, number> }[];
+  cards: number;
+}
+
 export type PropLevel = "ok" | "caution" | "warning" | "danger" | "breached";
 export interface PropRule {
   key: string; label: string; used: number | null; level: PropLevel;
@@ -474,6 +495,13 @@ export const api = {
     request<void>(`/api/accounts/${id}`, { method: "DELETE" }),
   duplicateAccount: (id: number) =>
     request<Account>(`/api/accounts/${id}/duplicate`, { method: "POST" }),
+
+  // Daily Report Card
+  reportCard: (d: string) => request<ReportCard>(`/api/report-cards/${d}`),
+  saveReportCard: (d: string, body: ReportCardFields) =>
+    request<ReportCard>(`/api/report-cards/${d}`, { method: "PUT", body: JSON.stringify(body) }),
+  reportCards: (from: string, to: string) =>
+    request<{ days: RCDay[]; stats: RCStats }>(`/api/report-cards?date_from=${from}&date_to=${to}`),
 
   // Prop Tracker
   propAccounts: () =>

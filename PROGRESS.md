@@ -416,3 +416,25 @@ its own database file `data/backtest.db`, its own candle store and API.
 - Calculated from closed trades only, so "trailing intraday" follows closed-trade
   peaks (the firm also sees open P&L).
 - **158 backend tests passing.**
+
+---
+
+## Daily Report Card ✅
+
+- **Report Card page** (sidebar → Journal): one card per trading day, both books
+  together. Goal for the day, standing reminders, a table grading each part of the
+  day (segments × Grade / A+ setups only / Sizing / In my favor / Comments), what I
+  learned, changes to make, overview, goal for tomorrow, easiest money missed (with
+  the day's missed trades), and a write-up per trade (your notes, tags, behaviour,
+  screenshots you can draw on). Autosaves; Print / PDF.
+- **Shared with Trading Day Review**: day grade, key lesson, what to change and
+  focus for tomorrow are the same fields, so you never type them twice.
+- **Goal carry-over**: tomorrow's goal (or the change to make, or the same goal)
+  from the previous journaled day becomes today's goal. Mark it hit / partly /
+  missed; the same goal 3 days running offers to become a standing reminder.
+- **Grade calendar**: month of day grades with goal dots and P&L, goal hit rate,
+  average grade by segment (your weakest time of day) and day grade vs P&L.
+- Settings → Report card: default segments, columns (choices or free text) and
+  reminders.
+- **164 backend tests passing.**
+
