@@ -7,15 +7,18 @@ import { useConfig } from "../lib/config";
 import { formatMoney, formatTimeOnly, pnlColor } from "../lib/format";
 import ManualTradeForm from "../components/trades/ManualTradeForm";
 import ScrollX from "../components/ScrollX";
+import StarButton from "../components/trades/StarButton";
+import StarredReview from "../components/trades/StarredReview";
 import { PlaybookBadge, usePlaybooks } from "../components/playbooks/shared";
 import { CATEGORY_LABELS, GradeBadge, HtfBadge, MistakeChips, ResultBadge, SideBadge, sideOf, StyleBadge, TagChips } from "../components/journal/Pickers";
 import { useSegment } from "../lib/segment";
 
-type View = "journal" | "numbers";
+type View = "journal" | "numbers" | "review";
 
 function loadView(): View {
   try {
-    return localStorage.getItem("tradelog.view") === "numbers" ? "numbers" : "journal";
+    const v = localStorage.getItem("tradelog.view");
+    return v === "numbers" || v === "review" ? v : "journal";
   } catch {
     return "journal";
   }
@@ -108,6 +111,10 @@ export default function TradeLog() {
     return m;
   }, [trades]);
 
+  function setStar(id: number, starred: boolean) {
+    setTrades((list) => list.map((x) => (x.id === id ? { ...x, starred } : x)));
+  }
+
   function set<K extends keyof TradeFilters>(k: K, v: TradeFilters[K]) {
     setFilters((f) => ({ ...f, [k]: v === "" ? undefined : v }));
   }
@@ -118,10 +125,10 @@ export default function TradeLog() {
         <h1 className="text-2xl font-semibold">Trade Log</h1>
         <div className="flex items-center gap-2">
           <div className="flex p-1 bg-bg-soft rounded-lg">
-            {(["journal", "numbers"] as View[]).map((v) => (
+            {(["journal", "numbers", "review"] as View[]).map((v) => (
               <button key={v} onClick={() => setView(v)}
                 className={`px-3 py-1 rounded-md text-xs font-medium ${view === v ? "bg-card text-ink" : "text-ink-muted"}`}>
-                {v === "journal" ? "Journal view" : "Numbers view"}
+                {v === "journal" ? "Journal view" : v === "numbers" ? "Numbers view" : "★ Review"}
               </button>
             ))}
           </div>
@@ -181,6 +188,13 @@ export default function TradeLog() {
           <option value="import">Import</option>
           <option value="notion">Notion</option>
         </FilterSelect>
+        <div>
+          <label className="label">Review</label>
+          <button type="button" onClick={() => set("starred", filters.starred ? undefined : true)} aria-pressed={!!filters.starred}
+            className={`input !w-auto whitespace-nowrap ${filters.starred ? "!border-amber-400/60 text-amber-400" : "text-ink-muted"}`}>
+            {filters.starred ? "★ Starred only" : "☆ All trades"}
+          </button>
+        </div>
         <div>
           <label className="label">From</label>
           <input type="date" className="input" value={filters.date_from ?? ""} onChange={(e) => set("date_from", e.target.value)} />
@@ -248,7 +262,9 @@ export default function TradeLog() {
 
       {err && <p className="text-neg text-sm mb-3">{err}</p>}
 
-      {loading ? (
+      {view === "review" ? (
+        <StarredReview />
+      ) : loading ? (
         <p className="text-ink-muted text-sm">Loading&hellip;</p>
       ) : trades.length === 0 ? (
         <div className="card p-10 text-center text-ink-muted">
@@ -259,7 +275,7 @@ export default function TradeLog() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border whitespace-nowrap">
-                <th className="px-3 py-2 w-8"></th>
+                <th className="px-3 py-2 w-14"></th>
                 {["Date", "Instrument", "Style", "Playbook", "Lot", "Time", "DTR/ATR", "Dir", "Prob", "What happened", "Result", "Trade type",
                   "Mistakes", "Emotion", "Entry Q", "Exit Q", "Location", "HTF", "P&L"].map((h) => (
                   <th key={h} className="px-3 py-2 font-medium">{h}</th>
@@ -270,7 +286,10 @@ export default function TradeLog() {
               {trades.map((t) => (
                 <tr key={t.id} className="border-b border-card-border/50 hover:bg-card-hover cursor-pointer align-top" onClick={() => nav(`/trades/${t.id}`)}>
                   <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSel(t.id)} />
+                    <span className="flex items-center gap-2">
+                      <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSel(t.id)} />
+                      <StarButton tradeId={t.id} starred={t.starred} onChange={(s) => setStar(t.id, s)} />
+                    </span>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-ink-muted">{t.trading_date}</td>
                   <td className="px-3 py-2 font-mono font-semibold whitespace-nowrap">
@@ -306,7 +325,7 @@ export default function TradeLog() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint border-b border-card-border">
-                <th className="px-3 py-2 w-8"></th>
+                <th className="px-3 py-2 w-14"></th>
                 <th className="px-3 py-2 font-medium">Date</th>
                 <th className="px-3 py-2 font-medium">Time</th>
                 <th className="px-3 py-2 font-medium">Symbol</th>
@@ -331,7 +350,10 @@ export default function TradeLog() {
                   onClick={() => nav(`/trades/${t.id}`)}
                 >
                   <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSel(t.id)} />
+                    <span className="flex items-center gap-2">
+                      <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSel(t.id)} />
+                      <StarButton tradeId={t.id} starred={t.starred} onChange={(s) => setStar(t.id, s)} />
+                    </span>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">{t.trading_date}</td>
                   <td className="px-3 py-2 text-ink-muted whitespace-nowrap">

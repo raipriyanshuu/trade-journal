@@ -147,6 +147,8 @@ case-insensitively. Every tag picker has an inline "+ tag" (`components/journal/
   India charges, AI review, Mistake rules, Tags), PropTracker + PropAccount (`/prop`, `/prop/:id`).
   ReportCard (`/report-card?date=`): `api/report_cards.py`, table `report_cards`; grade/lesson/
   change/tomorrow's goal live on the day's general `daily_sessions` row (shared with Review).
+- Starred trades: `trades.starred` + `last_reviewed_at` (in `_META_FIELDS`); `GET /api/trades/starred`
+  (summaries + notes + screenshots via `serialize_with_media`), `POST /api/trades/{id}/reviewed`.
 
 ## Gotchas learned the hard way
 - **Migrations (SQLite batch mode):** constraint naming convention lives in

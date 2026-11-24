@@ -105,7 +105,25 @@ def serialize_summary(db: Session, trade: Trade, threshold: Decimal | None = Non
         "initial_stop": trade.initial_stop,
         "planned_target": trade.planned_target,
         "first_entry_price": trade.first_entry_price,
+        "starred": trade.starred,
+        "last_reviewed_at": trade.last_reviewed_at,
     }
+
+
+def serialize_with_media(db: Session, trade: Trade, threshold: Decimal | None = None) -> dict:
+    """Summary plus the write-up and screenshots (report card, starred review)."""
+    from sqlalchemy import select
+
+    from app.models import Attachment
+
+    row = serialize_summary(db, trade, threshold)
+    row["notes"] = trade.notes
+    row["attachments"] = [
+        {"id": a.id, "file_path": a.file_path, "original_name": a.original_name, "mime_type": a.mime_type,
+         "annotations": a.annotations}
+        for a in db.scalars(select(Attachment).where(Attachment.trade_id == trade.id).order_by(Attachment.id))
+    ]
+    return row
 
 
 def serialize_detail(db: Session, trade: Trade) -> dict:

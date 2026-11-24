@@ -18,9 +18,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.results import breakeven_threshold, serialize_summary
+from app.core.results import breakeven_threshold, serialize_with_media
 from app.db import get_db
-from app.models import Attachment, DailySession, ReportCard, Setting, Trade
+from app.models import DailySession, ReportCard, Setting, Trade
 from app.models.report_card import GOAL_RESULTS
 from app.seeds import DEFAULT_SETTINGS
 
@@ -101,13 +101,7 @@ def get_card(d: date, db: Session = Depends(get_db)) -> dict:
     for t in trades:
         if t.currency not in thresholds:
             thresholds[t.currency] = breakeven_threshold(db, t.currency)
-        row = serialize_summary(db, t, thresholds[t.currency])
-        row["notes"] = t.notes
-        row["attachments"] = [
-            {"id": a.id, "file_path": a.file_path, "original_name": a.original_name, "mime_type": a.mime_type,
-             "annotations": a.annotations}
-            for a in db.scalars(select(Attachment).where(Attachment.trade_id == t.id).order_by(Attachment.id))
-        ]
+        row = serialize_with_media(db, t, thresholds[t.currency])
         rows.append(row)
 
     carry = _carry_over(db, d)

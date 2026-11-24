@@ -57,6 +57,8 @@ _META_FIELDS = (
     "playbook_id",
     "drawings",
     "option_type",
+    "starred",
+    "last_reviewed_at",
 )
 
 

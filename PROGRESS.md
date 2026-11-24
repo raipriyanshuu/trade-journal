@@ -438,3 +438,17 @@ its own database file `data/backtest.db`, its own candle store and API.
   reminders.
 - **164 backend tests passing.**
 
+---
+
+## Starred trades for review ✅
+
+- ☆ / ★ on every trade (Trade Log rows in both views, and the trade page header).
+  Starring never opens the trade; it's kept through rebuilds.
+- Trade Log filter **☆ All trades / ★ Starred only**, and a third view **★ Review**:
+  starred trades as cards (P&L, R, mistakes, emotion, setup, context, behaviour,
+  editable notes, screenshots you can draw on). Filter: all / with mistakes /
+  losses / wins / missed. **✓ Reviewed** stamps the date; "least recently reviewed
+  first" brings the ones you haven't looked at in a while to the top, and the
+  header counts how many weren't looked at this week. Scoped to the current book.
+- **165 backend tests passing.**
+

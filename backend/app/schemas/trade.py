@@ -88,6 +88,7 @@ class MissedTradeCreate(JournalFields):
 
 
 class TradeUpdate(BaseModel):
+    starred: bool | None = None
     option_type: str | None = None
     dtr: DecimalStr | None = None
     atr: DecimalStr | None = None
@@ -162,6 +163,8 @@ class TradeSummary(ORMModel):
     initial_stop: DecimalStr | None = None
     planned_target: DecimalStr | None = None
     first_entry_price: DecimalStr | None = None
+    starred: bool = False
+    last_reviewed_at: datetime | None = None
 
 
 class TradeDetail(TradeSummary):

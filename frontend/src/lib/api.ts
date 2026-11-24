@@ -216,6 +216,8 @@ export interface TradeSummary {
   initial_stop: string | null;
   planned_target: string | null;
   first_entry_price: string | null;
+  starred: boolean;
+  last_reviewed_at: string | null;
 }
 
 export interface JournalFields {
@@ -371,6 +373,7 @@ export interface TradeFilters {
   style?: string; // a style name, or UNASSIGNED_STYLE
   playbook?: string; // playbook id, or "none"
   option_type?: string; // call | put
+  starred?: boolean;
   include_demo?: boolean;
   sort_by?: string;
   order?: string;
@@ -439,6 +442,7 @@ const SCOPED = [
   /^\/api\/analytics\/(dashboard|calendar|breakdown)/,
   /^\/api\/mistakes\/(analytics|drilldown)/,
   /^\/api\/trades(\?|$)/,
+  /^\/api\/trades\/starred/,
   /^\/api\/review\/mae-mfe/,
   /^\/api\/reports(\?|$)/,
   /^\/api\/playbooks(\/\d+)?(\?|$)/,
@@ -674,11 +678,14 @@ export const api = {
     return request<TradeSummary[]>(`/api/trades${q ? `?${q}` : ""}`);
   },
   getTrade: (id: number) => request<TradeDetail>(`/api/trades/${id}`),
+  starredTrades: () => request<ReportCardTrade[]>("/api/trades/starred"),
+  markReviewed: (id: number) =>
+    request<{ id: number; last_reviewed_at: string }>(`/api/trades/${id}/reviewed`, { method: "POST" }),
   saveDrawings: (id: number, drawings: TradeDetail["drawings"]) =>
     request<{ drawings: TradeDetail["drawings"] }>(`/api/trades/${id}/drawings`, { method: "PUT", body: JSON.stringify({ drawings }) }),
   createManualTrade: (payload: ManualTradePayload) =>
     request<TradeDetail>("/api/trades/manual", { method: "POST", body: JSON.stringify(payload) }),
-  updateTrade: (id: number, patch: Partial<ManualTradePayload> & { pnl_only?: boolean; outcome?: string | null }) =>
+  updateTrade: (id: number, patch: Partial<ManualTradePayload> & { pnl_only?: boolean; outcome?: string | null; starred?: boolean }) =>
     request<TradeDetail>(`/api/trades/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteTrade: (id: number) => request<void>(`/api/trades/${id}`, { method: "DELETE" }),
 

@@ -96,6 +96,9 @@ class Trade(Base, TimestampMixin, DemoMixin):
         Boolean, nullable=False, default=False, server_default="0"
     )
     outcome: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Starred for review: trades to look at again (mistakes to remember, things done well).
+    starred: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0", index=True)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     # False for imported rows that only carry a Win/Loss label (no prices, no P&L):
     # they count toward win rate but never toward money statistics.
     pnl_known: Mapped[bool] = mapped_column(

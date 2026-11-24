@@ -19,7 +19,7 @@ from app.core.filters import where_playbook, where_segment, where_style
 from app.core.market_data import auto_fetch_trade
 from app.core.mistakes import recompute_for_account
 from app.core.playbooks import PlaybookError, set_trade_playbook
-from app.core.results import breakeven_threshold, serialize_detail, serialize_summary, trade_result
+from app.core.results import breakeven_threshold, serialize_detail, serialize_summary, serialize_with_media, trade_result
 from app.core.styles import get_styles, normalize_style
 from app.core.trade_builder import rebuild_for
 from app.db import get_db
@@ -65,10 +65,13 @@ def list_trades(
     segment: str | None = None,
     option_type: str | None = None,
     include_demo: bool = True,
+    starred: bool | None = None,
     sort_by: str = "open_time",
     order: str = "desc",
 ):
     stmt = where_segment(where_playbook(where_style(select(Trade), style), playbook), segment)
+    if starred is not None:
+        stmt = stmt.where(Trade.starred.is_(starred))
     if date_from:
         stmt = stmt.where(Trade.trading_date >= date_from)
     if date_to:
@@ -112,6 +115,30 @@ class BulkTagRequest(BaseModel):
     trade_ids: list[int]
     add: list[int] = []
     remove: list[int] = []
+
+
+@router.get("/starred")
+def starred_trades(db: Session = Depends(get_db), segment: str | None = None, result: str | None = None) -> list[dict]:
+    """Starred trades with their write-ups and screenshots, for the Review view."""
+    stmt = where_segment(select(Trade).where(Trade.starred.is_(True)), segment).order_by(Trade.open_time.desc())
+    thresholds: dict[str, Decimal] = {}
+    rows = []
+    for t in db.scalars(stmt):
+        if t.currency not in thresholds:
+            thresholds[t.currency] = breakeven_threshold(db, t.currency)
+        row = serialize_with_media(db, t, thresholds[t.currency])
+        if result and row["result"] != result:
+            continue
+        rows.append(row)
+    return rows
+
+
+@router.post("/{trade_id}/reviewed")
+def mark_reviewed(trade_id: int, db: Session = Depends(get_db)) -> dict:
+    trade = _get_trade_or_404(db, trade_id)
+    trade.last_reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"id": trade.id, "last_reviewed_at": trade.last_reviewed_at}
 
 
 @router.post("/bulk-tag")

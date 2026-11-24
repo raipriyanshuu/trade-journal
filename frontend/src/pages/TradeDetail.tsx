@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import StarButton from "../components/trades/StarButton";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ExecutionRow, TradeDetail as TradeDetailT } from "../lib/api";
 import { useConfig } from "../lib/config";
@@ -106,6 +107,8 @@ export default function TradeDetail() {
       <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-3">
+            <StarButton tradeId={trade.id} starred={trade.starred} big
+              onChange={(starred) => setTrade({ ...trade, starred })} />
             <span className="font-mono">{trade.symbol}</span>
             <span className={sideOf(trade).bullish ? "text-pos" : "text-neg"}>
               {sideOf(trade).label}
